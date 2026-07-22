@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeLink — Urgent Needs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="lifelink.html" class="logo">
+          <svg
+            class="pulse-mark"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 13H8L10.5 6L14 20L16.5 13H25"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          LifeLink
+        </a>
+        <ul class="nav-links">
+          <li><a href="lifelink.html#how">How it works</a></li>
+          <li><a href="link-landing.html">The Link</a></li>
+          <li><a href="blood-type-landing.html">Blood types</a></li>
+          <li>
+            <a href="urgent-needs-landing.html" class="active">Urgent needs</a>
+          </li>
+        </ul>
+        <div class="nav-cta">
+          <a href="lifelink.html#urgent" class="btn btn-line">Request blood</a>
+          <a href="becomeadonor.html" class="btn btn-solid">Become a donor</a>
+        </div>
+        <button class="nav-toggle" aria-label="Open menu">
+          <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+            <path
+              d="M0 1H24M0 8H24M0 15H24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero page-hero">
+        <div class="wrap">
+          <div class="eyebrow on-ink">Urgent needs</div>
+          <h1>Patients are waiting now. One match can change the next hour.</h1>
+          <p class="page-intro">
+            These live requests are the most immediate needs from partner
+            hospitals across the network. A single response can move a patient
+            from high-risk to safe.
+          </p>
+          <div class="hero-actions">
+            <a href="lifelink.html" class="btn btn-line on-ink">Back to home</a>
+            <a href="becomeadonor.html" class="btn btn-solid">Become a donor</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-shell">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">Respond now</div>
+            <h2>These requests are urgent, local, and time-sensitive.</h2>
+            <p>
+              When a patient needs blood, response time matters. LifeLink keeps
+              the requests visible so donors can act quickly.
+            </p>
+          </div>
+
+          <div class="page-grid">
+            <div class="filter-panel">
+              <form id="request-filter-form" class="filter-form" aria-label="Filter urgent requests">
+                <label>
+                  <span>Blood type</span>
+                  <input name="type" placeholder="O-" aria-label="Filter by blood type" />
+                </label>
+                <label>
+                  <span>Location</span>
+                  <input name="place" placeholder="Accra, Tema, etc." aria-label="Filter by location" />
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select name="status" aria-label="Filter by status">
+                    <option value="">All</option>
+                    <option value="open">Open</option>
+                    <option value="fulfilled">Fulfilled</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </label>
+                <button type="submit" class="btn btn-solid">Filter</button>
+              </form>
+              <div id="filter-hint" class="filter-hint" aria-live="polite"></div>
+            </div>
+            <div class="urgent-list" aria-live="polite">
+              <div class="muted">Loading requests…</div>
+            </div>
+          </div>
+          <script>
+            (function () {
+              const STORAGE_KEY = "lifelinkRequests";
+              const filterForm = document.getElementById("request-filter-form");
+              const hintElement = document.getElementById("filter-hint");
+              const listElement = document.querySelector(".urgent-list");
+
+              function getStoredRequests() {
+                try {
+                  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                } catch (error) {
+                  return [];
+                }
+              }
+
+              function getStoredSession() {
+                try {
+                  return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
+                } catch (error) {
+                  return null;
+                }
+              }
+
+              function showFilterHint(text) {
+                if (!hintElement) return;
+                hintElement.textContent = text || "";
+              }
+
+              function renderRequestsFromData(requests) {
+                if (!listElement) return;
+                listElement.innerHTML = "";
+
+                if (!requests.length) {
+                  showFilterHint("No requests match these filters.");
+                  listElement.innerHTML = `<p class="muted">No requests available.</p>`;
+                  return;
+                }
+
+                showFilterHint("");
+
+                requests.forEach((req) => {
+                  const item = document.createElement("div");
+                  item.className = "urgent-item";
+                  const tagLabel = req.status ? String(req.status).charAt(0).toUpperCase() + String(req.status).slice(1) : req.tag || "Urgent";
+                  const tagClass = req.status === "fulfilled" ? "high" : req.status === "cancelled" ? "" : (req.tag && req.tag.toLowerCase() === "critical" ? "high" : "");
+                  item.innerHTML = `
+                    <div class="type-badge">${req.type || "—"}</div>
+                    <div class="place">
+                      ${req.place || "Unknown location"}
+                      <span class="sub">${req.hospitalName ? `${req.hospitalName} · ` : ""}${req.hospitalLocation || "Unknown location"} · requested ${req.requestedMinutes || 0} minutes ago</span>
+                    </div>
+                    <div class="tag ${tagClass}">${tagLabel}</div>
+                    <a href="becomeadonor.html" class="respond">Respond →</a>
+                  `;
+                  listElement.appendChild(item);
+                });
+              }
+
+              async function loadRequests(filters = new URLSearchParams()) {
+                try {
+                  const url = new URL("/api/requests", window.location.origin);
+                  filters.forEach((value, key) => url.searchParams.set(key, value));
+
+                  const response = await fetch(url);
+                  if (!response.ok) throw new Error("no-api");
+
+                  const data = await response.json();
+                  if (data.requests && data.requests.length) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.requests));
+                    renderRequestsFromData(data.requests);
+                    return;
+                  }
+
+                  showFilterHint("No requests found with those filters.");
+                  renderRequestsFromData([]);
+                } catch (error) {
+                  const savedRequests = getStoredRequests();
+                  if (savedRequests.length) {
+                    renderRequestsFromData(savedRequests);
+                  } else {
+                    showFilterHint("No requests available offline.");
+                    if (listElement) {
+                      listElement.innerHTML = `<p class="muted">Unable to load requests.</p>`;
+                    }
+                  }
+                }
+              }
+
+              function buildFilters() {
+                const query = new URLSearchParams();
+                if (!filterForm) return query;
+                const formData = new FormData(filterForm);
+                const type = String(formData.get("type") || "").trim();
+                const place = String(formData.get("place") || "").trim();
+                const status = String(formData.get("status") || "").trim();
+                if (type) query.set("type", type);
+                if (place) query.set("place", place);
+                if (status) query.set("status", status);
+                return query;
+              }
+
+              async function init() {
+                const session = getStoredSession();
+                if (session && session.role === "donor" && filterForm) {
+                  const typeInput = filterForm.querySelector("input[name='type']");
+                  const placeInput = filterForm.querySelector("input[name='place']");
+                  if (session.bloodType && typeInput && !typeInput.value) typeInput.value = session.bloodType;
+                  if (session.location && placeInput && !placeInput.value) placeInput.value = session.location;
+                  showFilterHint(`Showing matches for ${session.bloodType || "your blood type"} in ${session.location || "your area"}.`);
+                }
+
+                if (filterForm) {
+                  filterForm.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    await loadRequests(buildFilters());
+                  });
+                }
+
+                await loadRequests(buildFilters());
+              }
+
+              document.addEventListener("DOMContentLoaded", init);
+            })();
+          </script>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="lifelink.html" class="logo">
+              <svg
+                class="pulse-mark"
+                viewBox="0 0 26 26"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M1 13H8L10.5 6L14 20L16.5 13H25"
+                  stroke="#d98b93"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              LifeLink
+            </a>
+            <p>Bringing urgent needs into view so help can arrive sooner.</p>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 LifeLink Foundation. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeLink — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="lifelink.html" class="logo">
+          <svg
+            class="pulse-mark"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 13H8L10.5 6L14 20L16.5 13H25"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          LifeLink
+        </a>
+        <div class="nav-cta">
+          <a href="auth.html" class="btn btn-line">Back to sign in</a>
+          <a href="lifelink.html" class="btn btn-solid">Back to home</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero dashboard-hero">
+        <div class="wrap">
+          <div class="eyebrow on-ink">Your LifeLink workspace</div>
+          <h1 id="dash-greeting">Welcome back</h1>
+          <p class="page-intro" id="dash-role">
+            Your account dashboard is ready.
+          </p>
+          <div class="hero-actions">
+            <a href="urgent-needs-landing.html" class="btn btn-line on-ink"
+              >View urgent needs</a
+            >
+            <a href="becomeadonor.html" class="btn btn-solid">Learn more</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-shell">
+        <div class="wrap">
+          <div class="dashboard-grid">
+            <div class="page-card dashboard-primary-card">
+              <span class="page-badge">Account overview</span>
+              <div id="dash-content"></div>
+            </div>
+
+            <div class="page-card dashboard-side-card">
+              <span class="page-badge">Quick actions</span>
+              <h3>Keep the network moving</h3>
+              <ul class="page-list">
+                <li>Respond to urgent requests faster.</li>
+                <li>Keep your profile and location up to date.</li>
+                <li>Coordinate care with trusted partners.</li>
+              </ul>
+              <div class="dashboard-actions-stack">
+                <a href="urgent-needs-landing.html" class="btn btn-line"
+                  >See urgent needs</a
+                >
+                <a id="dashboard-signout-btn" href="auth.html" class="btn btn-line">Sign out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+      (function () {
+        function getStoredSession() {
+          try {
+            return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
+          } catch (error) {
+            return null;
+          }
+        }
+
+        function showDashboard() {
+          const sess = getStoredSession();
+          const greeting = document.getElementById("dash-greeting");
+          const roleEl = document.getElementById("dash-role");
+          const content = document.getElementById("dash-content");
+          const signout = document.getElementById("dashboard-signout-btn");
+
+          if (signout) {
+            signout.addEventListener("click", (event) => {
+              event.preventDefault();
+              localStorage.removeItem("lifelinkCurrentUser");
+              window.location.href = "auth.html";
+            });
+          }
+
+          if (!sess) {
+            greeting.textContent = "Welcome to LifeLink";
+            roleEl.textContent =
+              "Sign in to access your dashboard and start helping the community.";
+            content.innerHTML = `
+              <div class="dashboard-empty-state">
+                <h3>No account detected yet</h3>
+                <p>Create an account to start receiving matches, posting requests, or helping donor campaigns.</p>
+                <a href="auth.html" class="btn btn-solid">Join LifeLink</a>
+              </div>
+            `;
+            return;
+          }
+
+          greeting.textContent = `Hello, ${sess.name}`;
+          roleEl.textContent = `You are signed in as a ${sess.role}.`;
+
+          if (sess.role === "hospital") {
+            content.innerHTML = `
+              <div class="dashboard-summary-grid">
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Hospital</span>
+                  <strong>${sess.hospitalName || "Your hospital"}</strong>
+                </div>
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Location</span>
+                  <strong>${sess.location || "—"}</strong>
+                </div>
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Account status</span>
+                  <strong>Verified partner</strong>
+                </div>
+              </div>
+              <div class="dashboard-actions-row">
+                <a href="hospital-dashboard.html" class="btn btn-solid">Manage requests</a>
+                <a href="urgent-needs-landing.html" class="btn btn-line">Browse urgent needs</a>
+              </div>
+            `;
+          } else {
+            content.innerHTML = `
+              <div class="dashboard-summary-grid">
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Blood type</span>
+                  <strong>${sess.bloodType || "—"}</strong>
+                </div>
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Location</span>
+                  <strong>${sess.location || "—"}</strong>
+                </div>
+                <div class="dashboard-stat-card">
+                  <span class="dashboard-label">Support level</span>
+                  <strong>Ready to help</strong>
+                </div>
+              </div>
+              <div class="dashboard-actions-row">
+                <a href="becomeadonor.html" class="btn btn-solid">Update profile</a>
+                <a href="urgent-needs-landing.html" class="btn btn-line">View nearby needs</a>
+              </div>
+            `;
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", showDashboard);
+      })();
+    </script>
+  </body>
+</html>

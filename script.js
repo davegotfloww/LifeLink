@@ -1,0 +1,741 @@
+/* ==========================================================================
+   LifeLink — interaction layer
+   Matches the markup/classes already in lifelink.html (nav-toggle, nav-links,
+   .stats .num, .section-head, .step, .pair, .compat-row, .urgent-item, etc.)
+   Adds its own minimal stylesheet for new states so the existing <style>
+   block in the HTML doesn't need to be touched.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  const prefersReduced = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+
+  /* ------------------------------------------------------------------ */
+  /* 0. Inject the small set of styles the interactions below rely on   */
+  /* ------------------------------------------------------------------ */
+  function injectStyles() {
+    const css = `
+      section[id], #top { scroll-margin-top: 100px; }
+
+      header.scrolled { box-shadow: 0 1px 0 var(--hair); }
+
+      .nav-links a.active::after { width: 100%; }
+
+      @media (max-width: 900px) {
+        .nav-links.open {
+          display: flex !important;
+          position: absolute;
+          top: 100%;
+          left: 0; right: 0;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0;
+          background: var(--paper);
+          border-bottom: 1px solid var(--hair);
+          padding: 4px 24px 20px;
+          z-index: 40;
+        }
+        .nav-links.open li { width: 100%; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+        .nav-links.open li:last-child { border-bottom: none; }
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity .7s ease, transform .7s ease;
+      }
+      .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .reveal { opacity: 1; transform: none; transition: none; }
+      }
+    `;
+    const style = document.createElement("style");
+    style.setAttribute("data-source", "script.js");
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 1. Mobile nav toggle                                                */
+  /* ------------------------------------------------------------------ */
+  function initNav() {
+    const toggle = document.querySelector(".nav-toggle");
+    const navLinks = document.querySelector(".nav-links");
+    if (!toggle || !navLinks) return;
+
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-controls", "nav-links");
+
+    const setOpen = (open) => {
+      navLinks.classList.toggle("open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+    };
+
+    toggle.addEventListener("click", () => {
+      setOpen(!navLinks.classList.contains("open"));
+    });
+
+    navLinks.querySelectorAll("a").forEach((a) => {
+      a.addEventListener("click", () => setOpen(false));
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!navLinks.contains(e.target) && !toggle.contains(e.target))
+        setOpen(false);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setOpen(false);
+    });
+
+    // header shadow once the page scrolls under it
+    const header = document.querySelector("header");
+    if (header) {
+      const onScroll = () =>
+        header.classList.toggle("scrolled", window.scrollY > 8);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 2. Active nav link tracks the section in view                      */
+  /* ------------------------------------------------------------------ */
+  function initActiveLinkTracking() {
+    const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
+    if (!navAnchors.length) return;
+
+    const targets = new Map();
+    navAnchors.forEach((a) => {
+      const id = a.getAttribute("href").slice(1);
+      const section = document.getElementById(id);
+      if (section) targets.set(section, a);
+    });
+    if (!targets.size) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const link = targets.get(entry.target);
+          if (!link || !entry.isIntersecting) return;
+          navAnchors.forEach((a) => a.classList.remove("active"));
+          link.classList.add("active");
+        });
+      },
+      { rootMargin: "-40% 0px -50% 0px", threshold: 0 },
+    );
+
+    targets.forEach((_link, section) => observer.observe(section));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 3. Scroll-reveal for content blocks                                 */
+  /* ------------------------------------------------------------------ */
+  function initReveal() {
+    const els = document.querySelectorAll(
+      ".section-head, .step, .pair, .compat-row, .urgent-item, .stat",
+    );
+    if (!els.length) return;
+
+    els.forEach((el, i) => {
+      el.classList.add("reveal");
+      el.style.transitionDelay = prefersReduced ? "0ms" : `${(i % 4) * 70}ms`;
+    });
+
+    if (prefersReduced) {
+      els.forEach((el) => el.classList.add("is-visible"));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+
+    els.forEach((el) => observer.observe(el));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 4. Count-up animation for the stat strip (.stats .num)              */
+  /* ------------------------------------------------------------------ */
+  function animateNum(el) {
+    const firstNode = el.childNodes[0];
+    if (!firstNode || firstNode.nodeType !== Node.TEXT_NODE) return;
+
+    const raw = firstNode.textContent.trim();
+    const hasComma = raw.includes(",");
+    const decimals = (raw.split(".")[1] || "").length;
+    const target = parseFloat(raw.replace(/,/g, ""));
+    if (Number.isNaN(target)) return;
+
+    if (prefersReduced) return; // leave the printed value as-is
+
+    const format = (n) => {
+      const fixed = decimals ? n.toFixed(decimals) : Math.round(n).toString();
+      return hasComma
+        ? Number(fixed).toLocaleString("en-US", {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+          })
+        : fixed;
+    };
+
+    const duration = 1200;
+    const start = performance.now();
+
+    function frame(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      firstNode.textContent = format(target * eased);
+      if (p < 1) requestAnimationFrame(frame);
+      else firstNode.textContent = format(target);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function initStatCounters() {
+    const statsSection = document.querySelector(".stats");
+    if (!statsSection) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.querySelectorAll(".num").forEach(animateNum);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(statsSection);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 5. Live-feeling "requested N minutes ago" ticker on urgent items    */
+  /* ------------------------------------------------------------------ */
+  function initUrgentTimestamps() {
+    const subs = document.querySelectorAll(".urgent-item .sub");
+    if (!subs.length) return;
+
+    const parsed = [];
+    subs.forEach((sub) => {
+      const text = sub.textContent;
+      const match = text.match(/requested\s+(\d+)\s*(minute|hour)s?\s*ago/i);
+      if (!match) return;
+      const unitMinutes = /hour/i.test(match[2]) ? 60 : 1;
+      parsed.push({
+        el: sub,
+        prefix: text.slice(0, text.indexOf("requested")),
+        minutes: parseInt(match[1], 10) * unitMinutes,
+      });
+    });
+    if (!parsed.length) return;
+
+    const render = (entry) => {
+      const m = entry.minutes;
+      const label =
+        m < 60
+          ? `${m} minute${m === 1 ? "" : "s"} ago`
+          : `${Math.floor(m / 60)} hour${Math.floor(m / 60) === 1 ? "" : "s"} ago`;
+      entry.el.textContent = `${entry.prefix}requested ${label}`;
+    };
+
+    setInterval(() => {
+      parsed.forEach((entry) => {
+        entry.minutes += 1;
+        render(entry);
+      });
+    }, 60000);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 6. Footer year, kept accurate without editing the HTML by hand      */
+  /* ------------------------------------------------------------------ */
+  function initFooterYear() {
+    const line = document.querySelector(".footer-bottom span");
+    if (!line) return;
+    line.textContent = line.textContent.replace(
+      /\d{4}/,
+      new Date().getFullYear(),
+    );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 7. Local auth flow for donors and hospitals                       */
+  /* ------------------------------------------------------------------ */
+  function getStoredUsers() {
+    try {
+      return JSON.parse(localStorage.getItem("lifelinkUsers")) || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveStoredUsers(users) {
+    localStorage.setItem("lifelinkUsers", JSON.stringify(users));
+  }
+
+  function getStoredSession() {
+    try {
+      return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function setStoredSession(user) {
+    localStorage.setItem("lifelinkCurrentUser", JSON.stringify(user));
+  }
+
+  function clearStoredSession() {
+    localStorage.removeItem("lifelinkCurrentUser");
+  }
+
+  function isAuthPage() {
+    const path = window.location.pathname.split("/").pop().toLowerCase();
+    return path === "auth.html";
+  }
+
+  function renderUserIsland() {
+    const headerNav = document.querySelector("header nav.wrap");
+    const ctaGroup = headerNav?.querySelector(".nav-cta");
+    if (!headerNav || !ctaGroup) return;
+
+    let island = document.getElementById("user-island");
+    if (!island) {
+      island = document.createElement("div");
+      island.id = "user-island";
+      island.className = "user-island";
+      island.hidden = true;
+      headerNav.insertBefore(island, ctaGroup);
+    }
+
+    const currentUser = getStoredSession();
+    const authNavLink = document.querySelector(
+      'header .nav-links a[href="auth.html"]',
+    );
+    const authCta = document.querySelector(
+      'header .nav-cta a[href="auth.html"]',
+    );
+
+    if (!currentUser) {
+      island.hidden = true;
+      if (authNavLink) authNavLink.parentElement.hidden = false;
+      if (authCta) authCta.hidden = false;
+      const joinButton = ctaGroup.querySelector(".btn-solid");
+      if (joinButton) {
+        joinButton.textContent = "Join LifeLink";
+        joinButton.setAttribute("href", "auth.html");
+      }
+      return;
+    }
+
+    const roleLabel = currentUser.role === "hospital" ? "Hospital" : "Donor";
+    const initials = (currentUser.name || "A")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
+
+    island.hidden = false;
+    island.innerHTML = `
+      <a href="dashboard.html" class="user-island-link">
+        <span class="user-island-badge">${roleLabel}</span>
+        <span class="user-island-initials">${initials || "U"}</span>
+      </a>
+    `;
+
+    if (authNavLink) authNavLink.parentElement.hidden = true;
+    if (authCta) authCta.hidden = true;
+
+    const joinButton = ctaGroup.querySelector('.btn-solid[href="auth.html"]');
+    if (joinButton) {
+      joinButton.textContent = "Open dashboard";
+      joinButton.setAttribute("href", "dashboard.html");
+    }
+  }
+
+  function initAuth() {
+    if (isAuthPage() && getStoredSession()) {
+      window.location.replace("dashboard.html");
+      return;
+    }
+
+    const authApp = document.querySelector("[data-auth-app]");
+    if (!authApp) return;
+
+    const tabs = authApp.querySelectorAll(".auth-tab");
+    const panels = authApp.querySelectorAll(".auth-panel");
+    const authForms = authApp.querySelector("[data-auth-forms]");
+    const authSession = authApp.querySelector("[data-auth-session]");
+    const messageBox = authApp.querySelector("[data-auth-message]");
+    const signupForm = document.getElementById("signup-form");
+    const loginForm = document.getElementById("login-form");
+    const signupRole = document.getElementById("signup-role");
+    const donorFields = document.getElementById("donor-fields");
+    const hospitalFields = document.getElementById("hospital-fields");
+    const logoutBtn = document.getElementById("logout-btn");
+    const sessionName = document.getElementById("session-name");
+    const sessionRole = document.getElementById("session-role");
+    const sessionDetail = document.getElementById("session-detail");
+    const loginEmail = document.getElementById("login-email");
+
+    function setMessage(text, type = "success") {
+      if (!messageBox) return;
+      messageBox.textContent = text;
+      messageBox.className = `auth-message ${type}`;
+    }
+
+    // API wrapper — if backend exists, prefer it; otherwise fall back to localStorage
+    let apiAvailable = false;
+    async function checkApi() {
+      try {
+        const r = await fetch("/api/ping");
+        apiAvailable = r.ok;
+      } catch (e) {
+        apiAvailable = false;
+      }
+    }
+    checkApi();
+
+    async function apiSignup(payload) {
+      try {
+        const r = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return await r.json();
+      } catch (e) {
+        return { error: "network" };
+      }
+    }
+
+    async function apiLogin(payload) {
+      try {
+        const r = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return await r.json();
+      } catch (e) {
+        return { error: "network" };
+      }
+    }
+
+    async function apiGetRequests() {
+      try {
+        const r = await fetch("/api/requests");
+        if (!r.ok) return { requests: [] };
+        return await r.json();
+      } catch (e) {
+        return { requests: [] };
+      }
+    }
+
+    async function apiCreateRequest(payload) {
+      try {
+        const r = await fetch("/api/requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return await r.json();
+      } catch (e) {
+        return { error: "network" };
+      }
+    }
+
+    function showTab(target) {
+      tabs.forEach((tab) => {
+        const isActive = tab.getAttribute("data-tab") === target;
+        tab.classList.toggle("active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+      });
+
+      panels.forEach((panel) => {
+        const isTarget = panel.getAttribute("data-view") === target;
+        panel.hidden = !isTarget;
+      });
+    }
+
+    function updateRoleFields() {
+      const role = signupRole ? signupRole.value : "donor";
+      if (donorFields) {
+        donorFields.hidden = role !== "donor";
+        donorFields.setAttribute("aria-hidden", String(role !== "donor"));
+        const bloodInput = donorFields.querySelector("input");
+        if (bloodInput) bloodInput.required = role === "donor";
+      }
+      if (hospitalFields) {
+        hospitalFields.hidden = role !== "hospital";
+        hospitalFields.setAttribute("aria-hidden", String(role !== "hospital"));
+        const hospitalInput = hospitalFields.querySelector("input");
+        if (hospitalInput) hospitalInput.required = role === "hospital";
+      }
+    }
+
+    function renderSession() {
+      const currentUser = getStoredSession();
+      if (!currentUser) {
+        if (authForms) authForms.hidden = false;
+        if (authSession) authSession.hidden = true;
+        return;
+      }
+
+      if (authForms) authForms.hidden = true;
+      if (authSession) authSession.hidden = false;
+
+      if (sessionName) sessionName.textContent = currentUser.name;
+      if (sessionRole) {
+        sessionRole.textContent =
+          currentUser.role === "hospital"
+            ? "Hospital account ready"
+            : "Donor account ready";
+      }
+      if (sessionDetail) {
+        sessionDetail.textContent =
+          currentUser.role === "hospital"
+            ? `${currentUser.hospitalName || "Hospital partner"} · ${currentUser.location || "Location shared"}`
+            : `${currentUser.bloodType || "Blood type available"} · ${currentUser.location || "Location shared"}`;
+      }
+      // show hospital dashboard link when appropriate
+      const dash = document.getElementById("to-dashboard");
+      if (dash) {
+        if (currentUser.role === "hospital") {
+          dash.style.display = "inline-flex";
+        } else {
+          dash.style.display = "none";
+        }
+      }
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        showTab(tab.getAttribute("data-tab"));
+        setMessage("");
+      });
+    });
+
+    if (signupRole) {
+      signupRole.addEventListener("change", updateRoleFields);
+      updateRoleFields();
+    }
+
+    if (signupForm) {
+      signupForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(signupForm);
+        const name = String(formData.get("name") || "").trim();
+        const role = String(formData.get("role") || "donor");
+        const email = String(formData.get("email") || "")
+          .trim()
+          .toLowerCase();
+        const password = String(formData.get("password") || "");
+        const confirmPassword = String(formData.get("confirmPassword") || "");
+        const location = String(formData.get("location") || "").trim();
+        const bloodType = String(formData.get("bloodType") || "").trim();
+        const hospitalName = String(formData.get("hospitalName") || "").trim();
+
+        if (!name || !email || !password || !confirmPassword || !location) {
+          setMessage(
+            "Please complete all required fields before continuing.",
+            "error",
+          );
+          return;
+        }
+
+        if (password.length < 6) {
+          setMessage("Choose a password with at least 6 characters.", "error");
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setMessage("Your password confirmation does not match.", "error");
+          return;
+        }
+
+        if (role === "donor" && !bloodType) {
+          setMessage(
+            "Please share your blood type so LifeLink can match you effectively.",
+            "error",
+          );
+          return;
+        }
+
+        if (role === "hospital" && !hospitalName) {
+          setMessage(
+            "Please share your hospital name so we can connect you appropriately.",
+            "error",
+          );
+          return;
+        }
+
+        // Prefer backend if available
+        await checkApi();
+        if (apiAvailable) {
+          const resp = await apiSignup({
+            name,
+            email,
+            password,
+            role,
+            location,
+            bloodType,
+            hospitalName,
+          });
+          if (resp && resp.error) {
+            setMessage(resp.error || "Could not create account", "error");
+            return;
+          }
+          const created = resp.user || resp;
+          setStoredSession(created);
+          signupForm.reset();
+          updateRoleFields();
+          renderSession();
+          renderUserIsland();
+          setMessage(
+            `Welcome aboard, ${created.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
+            "success",
+          );
+          window.location.replace("dashboard.html");
+          return;
+        }
+
+        // Fallback to local storage
+        const users = getStoredUsers();
+        const existing = users.find(
+          (entry) => entry.email.toLowerCase() === email,
+        );
+        if (existing) {
+          setMessage(
+            "An account with that email already exists. Please log in instead.",
+            "error",
+          );
+          showTab("login");
+          if (loginEmail) loginEmail.value = email;
+          return;
+        }
+
+        const user = {
+          id: `${Date.now()}`,
+          name,
+          role,
+          email,
+          password,
+          location,
+          bloodType: role === "donor" ? bloodType : "",
+          hospitalName: role === "hospital" ? hospitalName : "",
+          createdAt: new Date().toISOString(),
+        };
+
+        users.push(user);
+        saveStoredUsers(users);
+        setStoredSession(user);
+        signupForm.reset();
+        updateRoleFields();
+        renderSession();
+        renderUserIsland();
+        setMessage(
+          `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
+          "success",
+        );
+        window.location.replace("dashboard.html");
+      });
+    }
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(loginForm);
+        const email = String(formData.get("email") || "")
+          .trim()
+          .toLowerCase();
+        const password = String(formData.get("password") || "");
+
+        if (!email || !password) {
+          setMessage("Enter your email and password to continue.", "error");
+          return;
+        }
+
+        await checkApi();
+        if (apiAvailable) {
+          const resp = await apiLogin({ email, password });
+          if (resp && resp.error) {
+            setMessage(resp.error || "Login failed", "error");
+            return;
+          }
+          const u = resp.user || resp;
+          setStoredSession(u);
+          renderSession();
+          renderUserIsland();
+          setMessage(`Welcome back, ${u.name}.`, "success");
+          window.location.replace("dashboard.html");
+          return;
+        }
+
+        const users = getStoredUsers();
+        const match = users.find(
+          (entry) =>
+            entry.email.toLowerCase() === email && entry.password === password,
+        );
+
+        if (!match) {
+          setMessage(
+            "We could not find that account. Please check your details or sign up first.",
+            "error",
+          );
+          return;
+        }
+
+        setStoredSession(match);
+        renderSession();
+        renderUserIsland();
+        setMessage(`Welcome back, ${match.name}.`, "success");
+        window.location.replace("dashboard.html");
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        clearStoredSession();
+        renderSession();
+        renderUserIsland();
+        setMessage("You have been logged out.");
+        showTab("login");
+      });
+    }
+
+    renderSession();
+    renderUserIsland();
+    showTab("login");
+  }
+
+  /* ------------------------------------------------------------------ */
+  document.addEventListener("DOMContentLoaded", () => {
+    injectStyles();
+    initNav();
+    initActiveLinkTracking();
+    initReveal();
+    initStatCounters();
+    initUrgentTimestamps();
+    initFooterYear();
+    renderUserIsland();
+    initAuth();
+  });
+})();

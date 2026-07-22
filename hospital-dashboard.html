@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LifeLink — Hospital dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="lifelink.html" class="logo">
+          <svg
+            class="pulse-mark"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 13H8L10.5 6L14 20L16.5 13H25"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          LifeLink
+        </a>
+        <ul class="nav-links">
+          <li><a href="lifelink.html#how">How it works</a></li>
+          <li><a href="link-landing.html">The Link</a></li>
+          <li><a href="blood-type-landing.html">Blood types</a></li>
+          <li><a href="urgent-needs-landing.html">Urgent needs</a></li>
+        </ul>
+        <div class="nav-cta">
+          <a href="dashboard.html" class="btn btn-line">Back to dashboard</a>
+        </div>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Hospital dashboard</div>
+          <h2>Post an urgent blood request</h2>
+          <p>
+            Use this form to alert registered donors to an immediate need. For
+            demo, this sends data to the local backend.
+          </p>
+        </div>
+
+        <div class="page-grid">
+          <div class="page-card">
+            <form id="request-form" class="auth-form">
+              <input type="hidden" id="request-id" name="requestId" />
+              <label
+                ><span>Blood type</span
+                ><input name="type" required placeholder="O-"
+              /></label>
+              <label
+                ><span>Place / ward</span
+                ><input
+                  name="place"
+                  required
+                  placeholder="Trauma ward, Ridge Hospital"
+              /></label>
+              <label
+                ><span>Tag</span>
+                <select name="tag">
+                  <option>Urgent</option>
+                  <option>Critical</option>
+                  <option>Scheduled</option>
+                </select>
+              </label>
+              <label
+                ><span>Minutes since requested</span
+                ><input name="minutes" type="number" value="5"
+              /></label>
+              <button class="btn btn-solid" type="submit">Post request</button>
+              <div
+                id="request-msg"
+                style="margin-top: 12px; font-weight: 600"
+              ></div>
+            </form>
+          </div>
+          <div class="page-card page-highlight">
+            <h3>Your active requests</h3>
+            <div id="hospital-requests" class="request-list">
+              <p class="muted">No requests posted yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script>
+      (function () {
+        const STORAGE_KEY = "lifelinkRequests";
+
+        function getStoredSession() {
+          try {
+            return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
+          } catch (error) {
+            return null;
+          }
+        }
+
+        function getStoredRequests() {
+          try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+          } catch (error) {
+            return [];
+          }
+        }
+
+        function saveStoredRequests(requests) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+        }
+
+        function saveRequestLocally(request) {
+          const requests = getStoredRequests();
+          requests.unshift(request);
+          saveStoredRequests(requests);
+        }
+
+        async function fetchHospitalRequests(hospitalId) {
+          try {
+            const url = new URL("/api/requests", window.location.origin);
+            url.searchParams.set("hospitalId", hospitalId);
+            const response = await fetch(url.toString());
+            if (!response.ok) throw new Error("api-error");
+            const data = await response.json();
+            return data.requests || [];
+          } catch (error) {
+            return getStoredRequests().filter((req) => req.hospitalId === hospitalId);
+          }
+        }
+
+        async function submitRequest(payload, requestId) {
+          try {
+            const method = requestId ? "PUT" : "POST";
+            const url = requestId ? `/api/requests/${requestId}` : "/api/requests";
+            const response = await fetch(url, {
+              method,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+            if (!response.ok || (data && data.error)) {
+              return { error: data.error || "Request failed." };
+            }
+
+            return { request: data.request || null };
+          } catch (error) {
+            const offlineRequest = {
+              id: requestId || `req-${Date.now()}`,
+              type: payload.type,
+              place: payload.place,
+              tag: payload.tag || "Urgent",
+              requestedMinutes: payload.requestedMinutes || 0,
+              hospitalId: payload.hospitalId || null,
+              hospitalName: payload.hospitalName || null,
+              hospitalLocation: payload.hospitalLocation || null,
+              status: payload.status || "open",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            saveRequestLocally(offlineRequest);
+            return { request: offlineRequest, offline: true };
+          }
+        }
+
+        function formatStatusLabel(status) {
+          return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Open";
+        }
+
+        function renderHospitalRequests(requests) {
+          const list = document.getElementById("hospital-requests");
+          if (!list) return;
+          list.innerHTML = "";
+
+          if (!requests.length) {
+            list.innerHTML = `<p class="muted">No requests posted yet.</p>`;
+            return;
+          }
+
+          requests.forEach((req) => {
+            const card = document.createElement("div");
+            card.className = "request-card";
+            card.innerHTML = `
+              <div>
+                <div class="request-meta">
+                  <strong>${req.type || "—"}</strong>
+                  <span>${req.place || "Unknown location"}</span>
+                  <span class="status-pill ${req.status || "open"}">${formatStatusLabel(req.status)}</span>
+                </div>
+                <div style="margin-top: 8px; color: var(--muted); font-size: 14px;">
+                  ${req.hospitalName ? `${req.hospitalName} · ${req.hospitalLocation || "Location not set"}` : "Hospital request"}
+                </div>
+                <div style="margin-top: 8px; color: var(--muted); font-size: 13px;">
+                  requested ${req.requestedMinutes || 0} minutes ago
+                </div>
+              </div>
+              <div class="request-actions">
+                <button class="btn btn-line edit-request" data-id="${req.id}" type="button">Edit</button>
+                <button class="btn btn-solid cancel-request" data-id="${req.id}" type="button">Cancel</button>
+              </div>
+            `;
+            list.appendChild(card);
+          });
+
+          list.querySelectorAll(".edit-request").forEach((button) => {
+            button.addEventListener("click", () => {
+              const requestId = button.getAttribute("data-id");
+              const request = requests.find((r) => r.id === requestId);
+              if (!request) return;
+              populateFormForEdit(request);
+            });
+          });
+
+          list.querySelectorAll(".cancel-request").forEach((button) => {
+            button.addEventListener("click", async () => {
+              const requestId = button.getAttribute("data-id");
+              if (!requestId) return;
+              const result = await submitRequest({ status: "cancelled" }, requestId);
+              if (result.error) {
+                showRequestMessage(result.error, "error");
+                return;
+              }
+              showRequestMessage("Request cancelled.");
+              loadRequests();
+            });
+          });
+        }
+
+        function populateFormForEdit(request) {
+          const form = document.getElementById("request-form");
+          if (!form) return;
+          form.elements["requestId"].value = request.id || "";
+          form.elements["type"].value = request.type || "";
+          form.elements["place"].value = request.place || "";
+          form.elements["tag"].value = request.tag || "Urgent";
+          form.elements["minutes"].value = request.requestedMinutes || 0;
+          const submitButton = form.querySelector("button[type='submit']");
+          if (submitButton) submitButton.textContent = "Update request";
+          showRequestMessage("Editing request. Save to apply changes.", "success");
+        }
+
+        function resetFormState() {
+          const form = document.getElementById("request-form");
+          if (!form) return;
+          form.reset();
+          form.elements["requestId"].value = "";
+          const submitButton = form.querySelector("button[type='submit']");
+          if (submitButton) submitButton.textContent = "Post request";
+        }
+
+        function showRequestMessage(text, type = "success") {
+          const message = document.getElementById("request-msg");
+          if (!message) return;
+          message.textContent = text;
+          message.style.color = type === "error" ? "#a8192a" : "#211a1e";
+        }
+
+        async function loadRequests() {
+          const session = getStoredSession();
+          if (!session || session.role !== "hospital") {
+            renderHospitalRequests([]);
+            return;
+          }
+          const requests = await fetchHospitalRequests(session.id);
+          renderHospitalRequests(requests);
+        }
+
+        document
+          .getElementById("request-form")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const session = getStoredSession();
+            const requestId = String(f.get("requestId") || "").trim();
+            const payload = {
+              type: String(f.get("type") || "").trim(),
+              place: String(f.get("place") || "").trim(),
+              tag: String(f.get("tag") || "Urgent"),
+              requestedMinutes: Number(f.get("minutes") || 0),
+              hospitalId: session ? session.id : null,
+              hospitalName: session ? session.hospitalName || session.name : null,
+              hospitalLocation: session ? session.location : null,
+              status: "open",
+            };
+
+            if (!payload.type || !payload.place) {
+              showRequestMessage("Please provide a blood type and location.", "error");
+              return;
+            }
+
+            if (payload.requestedMinutes < 0) {
+              showRequestMessage("Minutes since requested cannot be negative.", "error");
+              return;
+            }
+
+            const result = await submitRequest(payload, requestId || null);
+            if (result.error) {
+              showRequestMessage(result.error, "error");
+              return;
+            }
+
+            showRequestMessage(
+              requestId ? "Request updated successfully." : "Request posted successfully.",
+            );
+            resetFormState();
+            loadRequests();
+          });
+
+        loadRequests();
+      })();
+    </script>
+  </body>
+</html>

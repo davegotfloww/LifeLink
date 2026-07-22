@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LifeLink — Admin</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="lifelink.html" class="logo">LifeLink</a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Admin</div>
+          <h2>Manage accounts</h2>
+          <p>Enter the admin key to list users and verify hospital accounts.</p>
+        </div>
+
+        <div class="page-grid">
+          <div class="page-card">
+            <label
+              ><span>Admin key</span
+              ><input id="admin-key" type="password" placeholder="admin key"
+            /></label>
+            <div style="margin-top: 12px; display: flex; gap: 12px">
+              <button id="fetch-users" class="btn btn-solid">List users</button>
+              <div
+                id="admin-msg"
+                style="font-weight: 600; align-self: center"
+              ></div>
+            </div>
+
+            <div id="users-list" style="margin-top: 18px"></div>
+          </div>
+
+          <div class="page-card page-highlight">
+            <h3>Notes</h3>
+            <p>
+              This interface is a simple demo. It sends the admin key over HTTPS
+              when used in production. The default local admin key is
+              <strong>dev-admin-key</strong> unless LIFELINK_ADMIN_KEY is set.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script>
+      document
+        .getElementById("fetch-users")
+        .addEventListener("click", async function () {
+          const key = document.getElementById("admin-key").value.trim();
+          const msg = document.getElementById("admin-msg");
+          msg.textContent = "";
+          try {
+            const r = await fetch(
+              "/api/admin/users?key=" + encodeURIComponent(key),
+            );
+            if (!r.ok) {
+              msg.textContent = "Unauthorized";
+              return;
+            }
+            const data = await r.json();
+            const list = document.getElementById("users-list");
+            list.innerHTML = "";
+            data.users.forEach((u) => {
+              const row = document.createElement("div");
+              row.style.padding = "12px 0";
+              row.style.borderBottom = "1px solid rgba(0,0,0,0.06)";
+              row.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700">${u.name} ${u.role === "hospital" && !u.verified ? '<span style=\"color:#a8192a;font-weight:700;margin-left:8px\">(unverified)</span>' : ""}</div>
+                <div style="font-size:13px;color:#666">${u.email} · ${u.role} · ${u.location || ""}</div>
+              </div>
+              <div>
+                ${u.role === "hospital" ? `<button class="btn btn-line" data-user="${u.id}">${u.verified ? "Revoke verification" : "Verify hospital"}</button>` : ""}
+              </div>
+            </div>
+          `;
+              list.appendChild(row);
+            });
+            // attach handlers
+            list.querySelectorAll("button[data-user]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const userId = btn.getAttribute("data-user");
+                const verify = btn.textContent.includes("Verify");
+                const r2 = await fetch("/api/admin/verify-user", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId, verify, key }),
+                });
+                if (!r2.ok) {
+                  msg.textContent = "Action failed";
+                  return;
+                }
+                const out = await r2.json();
+                msg.textContent = "Updated";
+                btn.textContent = out.user.verified
+                  ? "Revoke verification"
+                  : "Verify hospital";
+              });
+            });
+          } catch (err) {
+            msg.textContent = "Error";
+          }
+        });
+    </script>
+  </body>
+</html>

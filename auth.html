@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeLink — Join or sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="lifelink.html" class="logo">
+          <svg
+            class="pulse-mark"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 13H8L10.5 6L14 20L16.5 13H25"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          LifeLink
+        </a>
+        <ul class="nav-links">
+          <li><a href="lifelink.html#how">How it works</a></li>
+          <li><a href="link-landing.html">The Link</a></li>
+          <li><a href="blood-type-landing.html">Blood types</a></li>
+          <li><a href="urgent-needs-landing.html">Urgent needs</a></li>
+          <li><a href="auth.html" class="active">Login / Sign up</a></li>
+        </ul>
+        <div class="nav-cta">
+          <a href="urgent-needs-landing.html" class="btn btn-line"
+            >Request blood</a
+          >
+          <a href="auth.html" class="btn btn-solid">Join LifeLink</a>
+        </div>
+        <button class="nav-toggle" aria-label="Open menu">
+          <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+            <path
+              d="M0 1H24M0 8H24M0 15H24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero page-hero">
+        <div class="wrap">
+          <div class="eyebrow on-ink">Access LifeLink</div>
+          <h1>Create an account as a donor or a hospital partner.</h1>
+          <p class="page-intro">
+            Sign up once, then use the same account to respond to urgent needs,
+            receive matches, and manage your role in the network.
+          </p>
+          <div class="hero-actions">
+            <a href="lifelink.html" class="btn btn-line on-ink">Back to home</a>
+            <a href="urgent-needs-landing.html" class="btn btn-solid"
+              >View urgent needs</a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="page-shell">
+        <div class="wrap">
+          <div class="auth-grid">
+            <div class="page-card auth-intro">
+              <span class="page-badge">Who can join</span>
+              <h3>Choose the role that fits your part in the network.</h3>
+              <p>
+                Donors can register their blood type and availability. Hospitals
+                can create a verified profile for the patients they serve.
+              </p>
+              <ul class="page-list">
+                <li>Donors can receive nearby match alerts.</li>
+                <li>Hospitals can post urgent requests and coordinate care.</li>
+                <li>
+                  Every account is stored securely in this browser session.
+                </li>
+              </ul>
+            </div>
+
+            <div class="page-card" data-auth-app>
+              <div
+                class="auth-tabs"
+                role="tablist"
+                aria-label="Authentication options"
+              >
+                <button class="auth-tab active" data-tab="login" type="button" role="tab" aria-selected="true">
+                  Login
+                </button>
+                <button class="auth-tab" data-tab="signup" type="button" role="tab" aria-selected="false">
+                  Sign up
+                </button>
+              </div>
+
+              <div
+                class="auth-message"
+                data-auth-message
+                aria-live="polite"
+              ></div>
+
+              <div data-auth-forms>
+                <div class="auth-panel" data-view="login">
+                  <form id="login-form" class="auth-form">
+                    <label>
+                      <span>Email</span>
+                      <input
+                        id="login-email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Password</span>
+                      <input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </label>
+                    <button type="submit" class="btn btn-solid">Log in</button>
+                  </form>
+                </div>
+
+                <div class="auth-panel" data-view="signup" hidden>
+                  <form id="signup-form" class="auth-form">
+                    <label>
+                      <span>Full name</span>
+                      <input
+                        id="signup-name"
+                        name="name"
+                        type="text"
+                        placeholder="Ada Boateng"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      <span>I am signing up as</span>
+                      <select id="signup-role" name="role">
+                        <option value="donor">Donor</option>
+                        <option value="hospital">Hospital</option>
+                      </select>
+                    </label>
+
+                    <div id="donor-fields">
+                      <label>
+                        <span>Blood type</span>
+                        <input
+                          id="signup-blood-type"
+                          name="bloodType"
+                          type="text"
+                          placeholder="O-negative"
+                        />
+                      </label>
+                    </div>
+
+                    <div id="hospital-fields" hidden>
+                      <label>
+                        <span>Hospital name</span>
+                        <input
+                          id="signup-hospital-name"
+                          name="hospitalName"
+                          type="text"
+                          placeholder="Ridge Hospital"
+                        />
+                      </label>
+                    </div>
+
+                    <label>
+                      <span>Location</span>
+                      <input
+                        id="signup-location"
+                        name="location"
+                        type="text"
+                        placeholder="Accra, Ghana"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Email</span>
+                      <input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Password</span>
+                      <input
+                        id="signup-password"
+                        name="password"
+                        type="password"
+                        placeholder="Create a password"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Confirm password</span>
+                      <input
+                        id="signup-confirm-password"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Repeat your password"
+                        required
+                      />
+                    </label>
+                    <button type="submit" class="btn btn-solid">
+                      Create account
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="auth-session" data-auth-session hidden>
+                <div class="auth-session-card">
+                  <span class="page-badge">Signed in</span>
+                  <h3 id="session-name">Welcome back</h3>
+                  <p id="session-role">Your account is ready.</p>
+                  <p id="session-detail" class="session-detail"></p>
+                  <div
+                    style="
+                      display: flex;
+                      gap: 12px;
+                      margin-top: 10px;
+                      align-items: center;
+                    "
+                  >
+                    <a
+                      id="to-dashboard"
+                      href="dashboard.html"
+                      class="btn btn-line"
+                      style="display: none"
+                      >Open dashboard</a
+                    >
+                    <button id="logout-btn" class="btn btn-line" type="button">
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-bottom">
+          <span>© 2026 LifeLink Foundation. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>

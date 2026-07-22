@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeLink — The distance between a donor and a life</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="#top" class="logo">
+          <svg
+            class="pulse-mark"
+            viewBox="0 0 26 26"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 13H8L10.5 6L14 20L16.5 13H25"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          LifeLink
+        </a>
+        <ul class="nav-links">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="link-landing.html">The Link</a></li>
+          <li><a href="blood-type-landing.html">Blood types</a></li>
+          <li><a href="urgent-needs-landing.html">Urgent needs</a></li>
+          <li><a href="auth.html">Login / Sign up</a></li>
+        </ul>
+        <div class="nav-cta">
+          <a href="urgent-needs-landing.html" class="btn btn-line"
+            >Request blood</a
+          >
+          <a href="auth.html" class="btn btn-solid">Join LifeLink</a>
+        </div>
+        <button class="nav-toggle" aria-label="Open menu">
+          <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+            <path
+              d="M0 1H24M0 8H24M0 15H24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="top">
+      <!-- HERO -->
+      <section class="hero" style="padding-bottom: 0">
+        <div class="wrap">
+          <div class="hero-top">
+            <div class="eyebrow on-ink">
+              Lifelink — a network of givers and receivers
+            </div>
+            <h1>Somewhere near you, a heartbeat is waiting for yours.</h1>
+            <p>
+              LifeLink connects verified blood donors directly to patients in
+              urgent need — matched by blood type, by distance, by the minutes
+              that matter.
+            </p>
+            <div class="hero-actions">
+              <a href="auth.html" class="btn btn-solid"
+                >Join LifeLink <span class="btn-arrow">→</span></a
+              >
+              <a href="urgent-needs-landing.html" class="btn btn-line on-ink"
+                >See who needs blood now</a
+              >
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="split-col donor">
+              <span class="split-label">The Donor</span>
+              <p class="line">
+                "I didn't know my type was rare, until LifeLink told me someone
+                three miles away needed exactly that."
+              </p>
+              <p class="cap">Ama O., O-negative donor, Accra</p>
+            </div>
+            <div class="pulse-col">
+              <svg viewBox="0 0 90 360" preserveAspectRatio="none">
+                <path
+                  class="pulse-line"
+                  d="M45,0 L45,140 L30,150 L60,170 L45,180 L45,360"
+                />
+              </svg>
+            </div>
+            <div class="split-col patient">
+              <span class="split-label">The Patient</span>
+              <p class="line">
+                "My surgery was delayed twice for lack of my type. LifeLink
+                found a match before sunrise on the third day."
+              </p>
+              <p class="cap">Kwame A., recipient, Korle-Bu</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATS -->
+      <div class="stats">
+        <div class="wrap">
+          <div class="stat">
+            <div class="num">12,482</div>
+            <div class="label">Lives connected to a donor</div>
+          </div>
+          <div class="stat">
+            <div class="num">8,930</div>
+            <div class="label">Active verified donors</div>
+          </div>
+          <div class="stat">
+            <div class="num">64</div>
+            <div class="label">Partner hospitals nationwide</div>
+          </div>
+          <div class="stat">
+            <div class="num">47<span>min</span></div>
+            <div class="label">Average time to a matched donor</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <section id="how">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">How it works</div>
+            <h2>From a willing vein to a waiting patient, in three steps.</h2>
+            <p>
+              No queues, no cold calls. LifeLink does the searching so a match
+              reaches you the moment it exists.
+            </p>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <span class="index">01</span>
+              <h3>Register</h3>
+              <p>
+                Share your blood type, your location, and the hours you're free
+                to give. Verified once, ready always.
+              </p>
+            </div>
+            <div class="step">
+              <span class="index">02</span>
+              <h3>Get matched</h3>
+              <p>
+                The moment a nearby patient needs exactly your type, LifeLink
+                alerts you directly — no browsing required.
+              </p>
+            </div>
+            <div class="step">
+              <span class="index">03</span>
+              <h3>Donate &amp; follow up</h3>
+              <p>
+                Give safely at a partner facility, then receive a note on the
+                life your donation reached.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="thread">
+        <svg viewBox="0 0 1200 34" preserveAspectRatio="none">
+          <path d="M0,17 L560,17 L575,4 L595,30 L610,17 L1200,17" />
+        </svg>
+      </div>
+
+      <!-- THE LINK -->
+      <section id="link" class="link-section">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">The Link</div>
+            <h2>Every donation has a name on the other end.</h2>
+            <p>
+              LifeLink was built to close the distance between the two — so
+              giving blood feels like what it is: reaching someone directly.
+            </p>
+            <div class="hero-actions" style="margin-top: 24px">
+              <a href="link-landing.html" class="btn btn-line"
+                >Explore the link</a
+              >
+            </div>
+          </div>
+
+          <div class="pairs">
+            <div class="pair">
+              <div class="pair-side">
+                <span class="who">Donor · <b>B-positive</b></span>
+                <p class="quote">
+                  "I donate every eight weeks now. It's routine to me, but never
+                  to them."
+                </p>
+              </div>
+              <div class="pair-link">
+                <svg viewBox="0 0 44 14">
+                  <path d="M0,7 L14,7 L18,2 L22,12 L26,7 L44,7" />
+                </svg>
+              </div>
+              <div class="pair-side right">
+                <span class="who">Patient · Thyroid surgery</span>
+                <p class="quote">
+                  "Efua's donation meant my operation happened on schedule, not
+                  weeks later."
+                </p>
+              </div>
+              <div class="pair-meta">
+                Matched in 32 minutes · Ridge Hospital, Accra
+              </div>
+            </div>
+
+            <div class="pair">
+              <div class="pair-side">
+                <span class="who">Donor · <b>O-negative</b></span>
+                <p class="quote">
+                  "I'm the universal donor. LifeLink makes sure that actually
+                  means something."
+                </p>
+              </div>
+              <div class="pair-link">
+                <svg viewBox="0 0 44 14">
+                  <path d="M0,7 L14,7 L18,2 L22,12 L26,7 L44,7" />
+                </svg>
+              </div>
+              <div class="pair-side right">
+                <span class="who">Patient · Childbirth complication</span>
+                <p class="quote">
+                  "There wasn't time to wait. LifeLink had a donor at the
+                  hospital before I left recovery."
+                </p>
+              </div>
+              <div class="pair-meta">
+                Matched in 19 minutes · Korle-Bu Teaching Hospital
+              </div>
+            </div>
+
+            <div class="pair">
+              <div class="pair-side">
+                <span class="who">Donor · <b>AB-positive</b></span>
+                <p class="quote">
+                  "My type is rare. I used to think that made me useless to
+                  donate — it makes me essential."
+                </p>
+              </div>
+              <div class="pair-link">
+                <svg viewBox="0 0 44 14">
+                  <path d="M0,7 L14,7 L18,2 L22,12 L26,7 L44,7" />
+                </svg>
+              </div>
+              <div class="pair-side right">
+                <span class="who">Patient · Sickle cell care</span>
+                <p class="quote">
+                  "I need transfusions every month. Knowing a real person shows
+                  up for me changes how I face it."
+                </p>
+              </div>
+              <div class="pair-meta">
+                Ongoing donor relationship · 14 donations since 2024
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BLOOD TYPE COMPATIBILITY -->
+      <section id="types">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">Know your type</div>
+            <h2>Who your blood can reach.</h2>
+            <p>
+              Compatibility isn't universal — but every type reaches someone.
+              Here's exactly who your donation can help.
+            </p>
+            <div class="hero-actions" style="margin-top: 24px">
+              <a href="blood-type-landing.html" class="btn btn-line"
+                >Learn compatibility</a
+              >
+            </div>
+          </div>
+
+          <div class="compat-table">
+            <div class="compat-row">
+              <div class="compat-cell">
+                <div class="type-badge">O−</div>
+                Donor type
+              </div>
+              <div class="compat-cell">
+                <div class="recipient-list">
+                  <span class="universal"
+                    >All blood types — universal donor</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="compat-row">
+              <div class="compat-cell">
+                <div class="type-badge">O+</div>
+                Donor type
+              </div>
+              <div class="compat-cell">
+                <div class="recipient-list">
+                  <span>O+</span><span>A+</span><span>B+</span><span>AB+</span>
+                </div>
+              </div>
+            </div>
+            <div class="compat-row">
+              <div class="compat-cell">
+                <div class="type-badge">A−</div>
+                Donor type
+              </div>
+              <div class="compat-cell">
+                <div class="recipient-list">
+                  <span>A−</span><span>A+</span><span>AB−</span><span>AB+</span>
+                </div>
+              </div>
+            </div>
+            <div class="compat-row">
+              <div class="compat-cell">
+                <div class="type-badge">B−</div>
+                Donor type
+              </div>
+              <div class="compat-cell">
+                <div class="recipient-list">
+                  <span>B−</span><span>B+</span><span>AB−</span><span>AB+</span>
+                </div>
+              </div>
+            </div>
+            <div class="compat-row">
+              <div class="compat-cell">
+                <div class="type-badge">AB+</div>
+                Donor type
+              </div>
+              <div class="compat-cell">
+                <div class="recipient-list">
+                  <span>AB+ only — universal recipient, exclusive donor</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- URGENT NEEDS -->
+      <section id="urgent" class="urgent-section">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow on-ink">Right now</div>
+            <h2>Patients waiting on a match today.</h2>
+            <p>
+              These are live requests from LifeLink's partner hospitals. A
+              single donor can close any one of them.
+            </p>
+            <div class="hero-actions" style="margin-top: 24px">
+              <a href="urgent-needs-landing.html" class="btn btn-solid"
+                >View urgent needs</a
+              >
+            </div>
+          </div>
+
+          <div class="urgent-list">
+            <div class="urgent-item">
+              <div class="type-badge">O−</div>
+              <div class="place">
+                Trauma ward, Ridge Hospital
+                <span class="sub">Accra · requested 12 minutes ago</span>
+              </div>
+              <div class="tag high">Critical</div>
+              <a href="#" class="respond">Respond →</a>
+            </div>
+            <div class="urgent-item">
+              <div class="type-badge">A+</div>
+              <div class="place">
+                Maternity unit, Korle-Bu
+                <span class="sub">Accra · requested 40 minutes ago</span>
+              </div>
+              <div class="tag">Urgent</div>
+              <a href="#" class="respond">Respond →</a>
+            </div>
+            <div class="urgent-item">
+              <div class="type-badge">B−</div>
+              <div class="place">
+                Oncology, 37 Military Hospital
+                <span class="sub">Accra · requested 1 hour ago</span>
+              </div>
+              <div class="tag">Urgent</div>
+              <a href="#" class="respond">Respond →</a>
+            </div>
+            <div class="urgent-item">
+              <div class="type-badge">AB+</div>
+              <div class="place">
+                Sickle cell clinic, Tema General
+                <span class="sub">Tema · requested 2 hours ago</span>
+              </div>
+              <div class="tag">Scheduled</div>
+              <a href="#" class="respond">Respond →</a>
+            </div>
+          </div>
+          <div class="urgent-note">
+            Updated continuously from partner hospital systems.
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA BANNER -->
+      <section class="cta-banner">
+        <div class="wrap">
+          <div class="eyebrow">Join LifeLink</div>
+          <h2>Your blood type is <em>someone's</em> answered call.</h2>
+          <div class="actions">
+            <a href="auth.html" class="btn btn-solid"
+              >Become a donor <span class="btn-arrow">→</span></a
+            >
+            <a href="auth.html" class="btn btn-line">Partner your hospital</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="#top" class="logo">
+              <svg
+                class="pulse-mark"
+                viewBox="0 0 26 26"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M1 13H8L10.5 6L14 20L16.5 13H25"
+                  stroke="#d98b93"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              LifeLink
+            </a>
+            <p>
+              A foundation built to close the distance between every donor and
+              the patient who needs them.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Organization</h4>
+            <ul>
+              <li><a href="#">About LifeLink</a></li>
+              <li><a href="#">Our hospitals</a></li>
+              <li><a href="link-landing.html">Impact reports</a></li>
+              <li><a href="#">Careers</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>For people</h4>
+            <ul>
+              <li><a href="#">Become a donor</a></li>
+              <li><a href="#">Request blood</a></li>
+              <li><a href="#">Blood type guide</a></li>
+              <li><a href="#">Donor safety</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+              <li><a href="#">hello@lifelink.org</a></li>
+              <li><a href="#">+233 30 000 0000</a></li>
+              <li><a href="#">Accra, Ghana</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 LifeLink Foundation. All rights reserved.</span>
+          <div class="socials">
+            <a href="#">Instagram</a>
+            <a href="#">X</a>
+            <a href="#">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>
