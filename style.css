@@ -1182,7 +1182,7 @@ footer {
   font-size: 14px;
   color: var(--ink-soft);
 }
-..auth-form input,
+.auth-form input,
 .auth-form select {
   padding: 14px 16px;
   border: 1px solid var(--hair);
