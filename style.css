@@ -281,6 +281,46 @@ nav.wrap {
 }
 .nav-toggle {
   display: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid var(--hair);
+  background: rgba(242, 226, 213, 0.95);
+  box-shadow: 0 10px 24px rgba(21, 18, 26, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.nav-toggle:hover {
+  transform: translateY(-1px);
+  border-color: var(--crimson);
+  box-shadow: 0 14px 28px rgba(21, 18, 26, 0.12);
+}
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 3px;
+}
+.nav-toggle .line {
+  width: 18px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 999px;
+  transition: transform 0.25s ease, opacity 0.25s ease, background 0.25s ease;
+}
+.nav-toggle .line + .line {
+  margin-top: 6px;
+}
+.nav-toggle.open .line:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+.nav-toggle.open .line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.nav-toggle.open .line:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
 }
 
 /* ---------- HERO ---------- */
@@ -1077,6 +1117,12 @@ footer {
     display: block;
     width: 100%;
     padding: 14px 0;
+    color: var(--ink-text);
+    border-radius: 12px;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .nav-links a:hover {
+    background: rgba(168, 25, 42, 0.08);
   }
   .nav-links.open {
     display: flex !important;
@@ -1086,24 +1132,23 @@ footer {
     right: 0;
     flex-direction: column;
     gap: 0;
-    background: var(--paper);
-    border-bottom: 1px solid var(--hair);
-    padding: 4px 24px 20px;
+    background: rgba(242, 226, 213, 0.98);
+    border: 1px solid var(--hair);
+    border-radius: 20px;
+    padding: 18px 22px;
+    box-shadow: 0 18px 40px rgba(21, 18, 26, 0.08);
     z-index: 40;
   }
   .nav-links.open li {
     width: 100%;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--hair);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(21, 18, 26, 0.08);
   }
   .nav-links.open li:last-child {
     border-bottom: none;
   }
   .nav-toggle {
     display: block;
-    background: none;
-    border: none;
-    color: var(--ink-text);
   }
   .nav-cta {
     display: none;
