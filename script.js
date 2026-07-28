@@ -5,7 +5,13 @@
    Adds its own minimal stylesheet for new states so the existing <style>
    block in the HTML doesn't need to be touched.
    ========================================================================== */
+const supabaseUrl = "https://qkdqjtzlkzfwwlyocvlo.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrZHFqdHpsa3pmd3dseW9jdmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMzgxNTksImV4cCI6MjEwMDgxNDE1OX0.B1gOHFIv5VPqvXvRb-dOiGBTbCuC2Jpya1_s-pLUcyI";
 
+const supabase = window.supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
 (function () {
   "use strict";
 
@@ -436,6 +442,75 @@
       }
     }
 
+    async function signUpUser(formData) {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      const user = data.user;
+
+      if (!user) {
+        alert("Please check your email to verify your account.");
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          full_name: formData.full_name,
+          email: formData.email,
+          user_type: formData.user_type,
+          hospital_name: formData.hospital_name || null,
+          blood_type: formData.blood_type || null,
+          phone: formData.phone || null,
+        });
+
+      if (profileError) {
+        alert(profileError.message);
+        return;
+      }
+
+      alert("Account created successfully!");
+    }
+
+    async function loginUser(email, password) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      const user = data.user;
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        alert(profileError.message);
+        return;
+      }
+
+      if (profile.user_type === "Hospital") {
+        window.location.href = "hospital-dashboard.html";
+      } else {
+        window.location.href = "dashboard.html";
+      }
+    }
+
     async function apiLogin(payload) {
       try {
         const r = await fetch("/api/login", {
@@ -553,19 +628,26 @@
         event.preventDefault();
 
         const formData = new FormData(signupForm);
-        const name = String(formData.get("name") || "").trim();
-        const role = String(formData.get("role") || "donor");
-        const email = String(formData.get("email") || "")
-          .trim()
-          .toLowerCase();
-        const password = String(formData.get("password") || "");
-        const confirmPassword = String(formData.get("confirmPassword") || "");
-        const location = String(formData.get("location") || "").trim();
-        const bloodType = String(formData.get("bloodType") || "").trim();
-        const hospitalName = String(formData.get("hospitalName") || "").trim();
-        const contact = String(formData.get("contact") || "").trim();
+        const payload = {
+          full_name: String(formData.get("name") || "").trim(),
+          user_type: String(formData.get("role") || "donor"),
+          email: String(formData.get("email") || "")
+            .trim()
+            .toLowerCase(),
+          password: String(formData.get("password") || ""),
+          confirmPassword: String(formData.get("confirmPassword") || ""),
+          blood_type: String(formData.get("bloodType") || "").trim(),
+          hospital_name: String(formData.get("hospitalName") || "").trim(),
+          phone: String(formData.get("contact") || "").trim(),
+        };
 
-        if (!name || !email || !password || !confirmPassword || !location) {
+        if (
+          !payload.full_name ||
+          !payload.email ||
+          !payload.password ||
+          !payload.confirmPassword ||
+          !String(formData.get("location") || "").trim()
+        ) {
           setMessage(
             "Please complete all required fields before continuing.",
             "error",
@@ -573,17 +655,17 @@
           return;
         }
 
-        if (password.length < 6) {
+        if (payload.password.length < 6) {
           setMessage("Choose a password with at least 6 characters.", "error");
           return;
         }
 
-        if (password !== confirmPassword) {
+        if (payload.password !== payload.confirmPassword) {
           setMessage("Your password confirmation does not match.", "error");
           return;
         }
 
-        if (role === "donor" && !bloodType) {
+        if (payload.user_type === "donor" && !payload.blood_type) {
           setMessage(
             "Please share your blood type so LifeLink can match you effectively.",
             "error",
@@ -591,7 +673,7 @@
           return;
         }
 
-        if (role === "hospital" && !hospitalName) {
+        if (payload.user_type === "hospital" && !payload.hospital_name) {
           setMessage(
             "Please share your hospital name so we can connect you appropriately.",
             "error",
@@ -599,77 +681,7 @@
           return;
         }
 
-        // Prefer backend if available
-        await checkApi();
-        if (apiAvailable) {
-          const resp = await apiSignup({
-            name,
-            email,
-            password,
-            role,
-            location,
-            bloodType,
-            hospitalName,
-            contact,
-          });
-          if (resp && resp.error) {
-            setMessage(resp.error || "Could not create account", "error");
-            return;
-          }
-          const created = resp.user || resp;
-          setStoredSession(created);
-          signupForm.reset();
-          updateRoleFields();
-          renderSession();
-          renderUserIsland();
-          setMessage(
-            `Welcome aboard, ${created.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
-            "success",
-          );
-          window.location.replace("dashboard.html");
-          return;
-        }
-
-        // Fallback to local storage
-        const users = getStoredUsers();
-        const existing = users.find(
-          (entry) => entry.email.toLowerCase() === email,
-        );
-        if (existing) {
-          setMessage(
-            "An account with that email already exists. Please log in instead.",
-            "error",
-          );
-          showTab("login");
-          if (loginEmail) loginEmail.value = email;
-          return;
-        }
-
-        const user = {
-          id: `${Date.now()}`,
-          name,
-          role,
-          email,
-          password,
-          location,
-          bloodType: role === "donor" ? bloodType : "",
-          hospitalName: role === "hospital" ? hospitalName : "",
-          contact: role === "hospital" ? contact : "",
-          createdAt: new Date().toISOString(),
-        };
-
-        users.push(user);
-        saveStoredUsers(users);
-        setStoredSession(user);
-        signupForm.reset();
-        updateRoleFields();
-        renderSession();
-        renderUserIsland();
-        setMessage(
-          `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
-          "success",
-        );
-        window.location.replace("dashboard.html");
+        await signUpUser(payload);
       });
     }
 
@@ -704,25 +716,8 @@
           return;
         }
 
-        const users = getStoredUsers();
-        const match = users.find(
-          (entry) =>
-            entry.email.toLowerCase() === email && entry.password === password,
-        );
-
-        if (!match) {
-          setMessage(
-            "We could not find that account. Please check your details or sign up first.",
-            "error",
-          );
-          return;
-        }
-
-        setStoredSession(match);
-        renderSession();
-        renderUserIsland();
-        setMessage(`Welcome back, ${match.name}.`, "success");
-        window.location.replace("dashboard.html");
+        await loginUser(email, password);
+        return;
       });
     }
 
