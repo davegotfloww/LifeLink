@@ -71,10 +71,10 @@
                   <option>Scheduled</option>
                 </select>
               </label>
-              <label
-                ><span>Minutes since requested</span
-                ><input name="minutes" type="number" value="5"
-              /></label>
+              <label>
+                <span>Contact number</span>
+                <input name="contact" type="tel" placeholder="+233 24 000 0000" />
+              </label>
               <button class="btn btn-solid" type="submit">Post request</button>
               <div
                 id="request-msg"
@@ -157,6 +157,7 @@
               place: payload.place,
               tag: payload.tag || "Urgent",
               requestedMinutes: payload.requestedMinutes || 0,
+              contact: payload.contact || null,
               hospitalId: payload.hospitalId || null,
               hospitalName: payload.hospitalName || null,
               hospitalLocation: payload.hospitalLocation || null,
@@ -239,7 +240,7 @@
           form.elements["type"].value = request.type || "";
           form.elements["place"].value = request.place || "";
           form.elements["tag"].value = request.tag || "Urgent";
-          form.elements["minutes"].value = request.requestedMinutes || 0;
+          if (form.elements["contact"]) form.elements["contact"].value = request.contact || "";
           const submitButton = form.querySelector("button[type='submit']");
           if (submitButton) submitButton.textContent = "Update request";
           showRequestMessage("Editing request. Save to apply changes.", "success");
@@ -283,6 +284,7 @@
               place: String(f.get("place") || "").trim(),
               tag: String(f.get("tag") || "Urgent"),
               requestedMinutes: Number(f.get("minutes") || 0),
+              contact: String(f.get("contact") || (session ? session.contact || "" : "")).trim(),
               hospitalId: session ? session.id : null,
               hospitalName: session ? session.hospitalName || session.name : null,
               hospitalLocation: session ? session.location : null,
