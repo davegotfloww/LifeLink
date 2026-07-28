@@ -1063,6 +1063,20 @@ footer {
   .nav-links {
     display: none;
     width: 100%;
+    flex-direction: column;
+    gap: 0;
+    position: static;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .nav-links li {
+    width: 100%;
+  }
+  .nav-links a {
+    display: block;
+    width: 100%;
+    padding: 14px 0;
   }
   .nav-links.open {
     display: flex !important;
@@ -1071,7 +1085,6 @@ footer {
     left: 0;
     right: 0;
     flex-direction: column;
-    align-items: stretch;
     gap: 0;
     background: var(--paper);
     border-bottom: 1px solid var(--hair);
