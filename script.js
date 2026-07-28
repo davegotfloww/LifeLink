@@ -563,6 +563,7 @@
         const location = String(formData.get("location") || "").trim();
         const bloodType = String(formData.get("bloodType") || "").trim();
         const hospitalName = String(formData.get("hospitalName") || "").trim();
+        const contact = String(formData.get("contact") || "").trim();
 
         if (!name || !email || !password || !confirmPassword || !location) {
           setMessage(
@@ -609,6 +610,7 @@
             location,
             bloodType,
             hospitalName,
+            contact,
           });
           if (resp && resp.error) {
             setMessage(resp.error || "Could not create account", "error");
@@ -652,6 +654,7 @@
           location,
           bloodType: role === "donor" ? bloodType : "",
           hospitalName: role === "hospital" ? hospitalName : "",
+          contact: role === "hospital" ? contact : "",
           createdAt: new Date().toISOString(),
         };
 

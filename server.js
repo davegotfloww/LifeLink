@@ -36,7 +36,7 @@ app.get("/api/ping", (req, res) => {
 });
 
 app.post("/api/signup", (req, res) => {
-  const { name, email, password, role, location, bloodType, hospitalName } =
+  const { name, email, password, role, location, bloodType, hospitalName, contact } =
     req.body || {};
   if (!name || !email || !password || !role)
     return res.status(400).json({ error: "Missing required fields" });
@@ -56,6 +56,7 @@ app.post("/api/signup", (req, res) => {
     location: location || "",
     bloodType: role === "donor" ? bloodType || "" : "",
     hospitalName: role === "hospital" ? hospitalName || "" : "",
+    contact: role === "hospital" ? contact || "" : "",
     verified: role === "hospital" ? false : true,
     passSalt: salt,
     passHash: hash,
@@ -129,22 +130,24 @@ app.get("/api/requests", (req, res) => {
 });
 
 app.post("/api/requests", (req, res) => {
-  const { type, place, tag, requestedMinutes, hospitalId } = req.body || {};
+  const { type, place, priority, tag, requestedMinutes, hospitalId, contact } = req.body || {};
   if (!type || !place)
     return res.status(400).json({ error: "Missing request fields" });
 
   const data = readData();
   const hospital = data.users.find((u) => u.id === hospitalId && u.role === "hospital");
+  const hospitalContact = hospital ? (hospital.contact || hospital.phone || hospital.contactNumber || null) : (contact || null);
   const reqObj = {
     id: `req-${Date.now()}`,
     type,
     place,
-    tag: tag || "Urgent",
+    priority: priority || tag || "Urgent",
     requestedMinutes: requestedMinutes || 0,
     status: "open",
     hospitalId: hospitalId || null,
     hospitalName: hospital ? hospital.hospitalName || hospital.name : null,
     hospitalLocation: hospital ? hospital.location || "" : "",
+    contact: hospitalContact,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -155,7 +158,7 @@ app.post("/api/requests", (req, res) => {
 
 app.put("/api/requests/:id", (req, res) => {
   const { id } = req.params || {};
-  const { type, place, tag, requestedMinutes, status } = req.body || {};
+  const { type, place, priority, tag, requestedMinutes, status, contact } = req.body || {};
   if (!id) return res.status(400).json({ error: "Missing request id" });
 
   const data = readData();
@@ -164,9 +167,11 @@ app.put("/api/requests/:id", (req, res) => {
 
   if (type !== undefined) request.type = type;
   if (place !== undefined) request.place = place;
-  if (tag !== undefined) request.tag = tag;
+  if (priority !== undefined) request.priority = priority;
+  if (tag !== undefined && request.priority === undefined) request.priority = tag;
   if (requestedMinutes !== undefined)
     request.requestedMinutes = requestedMinutes;
+  if (contact !== undefined) request.contact = contact;
 
   if (status !== undefined) {
     const allowed = ["open", "fulfilled", "cancelled"];

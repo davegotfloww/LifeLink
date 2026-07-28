@@ -151,15 +151,18 @@
                 requests.forEach((req) => {
                   const item = document.createElement("div");
                   item.className = "urgent-item";
-                  const tagLabel = req.status ? String(req.status).charAt(0).toUpperCase() + String(req.status).slice(1) : req.tag || "Urgent";
-                  const tagClass = req.status === "fulfilled" ? "high" : req.status === "cancelled" ? "" : (req.tag && req.tag.toLowerCase() === "critical" ? "high" : "");
+                  const priorityLabel = req.priority
+                    ? String(req.priority).charAt(0).toUpperCase() + String(req.priority).slice(1)
+                    : (req.tag ? String(req.tag).charAt(0).toUpperCase() + String(req.tag).slice(1) : "Urgent");
+                  const priorityClass = (priorityLabel || "").toLowerCase() === "critical" ? "high" : (priorityLabel || "").toLowerCase() === "scheduled" ? "muted" : "";
                   item.innerHTML = `
                     <div class="type-badge">${req.type || "—"}</div>
                     <div class="place">
                       ${req.place || "Unknown location"}
-                      <span class="sub">${req.hospitalName ? `${req.hospitalName} · ` : ""}${req.hospitalLocation || "Unknown location"} · requested ${req.requestedMinutes || 0} minutes ago</span>
+                      <span class="sub">${req.hospitalName ? `${req.hospitalName} · ` : ""}${req.hospitalLocation || "Unknown location"}</span>
+                      <div class="contact">Contact: ${req.contact || "—"}</div>
                     </div>
-                    <div class="tag ${tagClass}">${tagLabel}</div>
+                    <div class="priority ${priorityClass}">${priorityLabel}</div>
                     <a href="becomeadonor.html" class="respond">Respond →</a>
                   `;
                   listElement.appendChild(item);
