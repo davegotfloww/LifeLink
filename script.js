@@ -504,7 +504,7 @@ const supabase = window.supabase.createClient(
         return;
       }
 
-      if (profile.user_type === "Hospital") {
+      if (String(profile.user_type || "").toLowerCase() === "hospital") {
         window.location.href = "hospital-dashboard.html";
       } else {
         window.location.href = "dashboard.html";
@@ -681,7 +681,13 @@ const supabase = window.supabase.createClient(
           return;
         }
 
-        await signUpUser(payload);
+        try {
+          console.log("signup payload", payload);
+          await signUpUser(payload);
+        } catch (e) {
+          console.error(e);
+          alert("Signup failed: " + (e && e.message ? e.message : String(e)));
+        }
       });
     }
 
