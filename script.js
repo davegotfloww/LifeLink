@@ -1,6 +1,6 @@
 /* ==========================================================================
    LifeLink — interaction layer
-   Matches the markup/classes already in lifelink.html (nav-toggle, nav-links,
+   Matches the markup/classes already in index.html (nav-toggle, nav-links,
    .stats .num, .section-head, .step, .pair, .compat-row, .urgent-item, etc.)
    Adds its own minimal stylesheet for new states so the existing <style>
    block in the HTML doesn't need to be touched.
@@ -329,6 +329,17 @@
     const authCta = document.querySelector(
       'header .nav-cta a[href="auth.html"]',
     );
+
+    const footerRequestLink = document.getElementById("footer-request-blood-link");
+    const shouldShowFooterRequest = currentUser && currentUser.role === "hospital";
+    if (footerRequestLink) {
+      const listItem = footerRequestLink.closest("li");
+      if (listItem) {
+        listItem.hidden = !shouldShowFooterRequest;
+      } else {
+        footerRequestLink.hidden = !shouldShowFooterRequest;
+      }
+    }
 
     if (!currentUser) {
       island.hidden = true;
