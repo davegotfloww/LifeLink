@@ -43,8 +43,8 @@
           <div class="eyebrow">Hospital dashboard</div>
           <h2>Post an urgent blood request</h2>
           <p>
-            Use this form to alert registered donors to an immediate need. For
-            demo, this sends data to the local backend.
+            Use this form to alert registered donors to an immediate need. This
+            now stores requests in Supabase.
           </p>
         </div>
 
@@ -91,6 +91,7 @@
         </div>
       </div>
     </main>
+    <script src="script.js"></script>
     <script>
       (function () {
         const STORAGE_KEY = "lifelinkRequests";
@@ -123,33 +124,17 @@
 
         async function fetchHospitalRequests(hospitalId) {
           try {
-            const url = new URL("/api/requests", window.location.origin);
-            url.searchParams.set("hospitalId", hospitalId);
-            const response = await fetch(url.toString());
-            if (!response.ok) throw new Error("api-error");
-            const data = await response.json();
-            return data.requests || [];
+            return await window.supabaseRequests.fetchUrgentRequests({ hospitalId });
           } catch (error) {
-            return getStoredRequests().filter((req) => req.hospitalId === hospitalId);
+            console.error(error);
+            return getStoredRequests().filter((req) => String(req.hospitalId) === String(hospitalId));
           }
         }
 
         async function submitRequest(payload, requestId) {
           try {
-            const method = requestId ? "PUT" : "POST";
-            const url = requestId ? `/api/requests/${requestId}` : "/api/requests";
-            const response = await fetch(url, {
-              method,
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-
-            const data = await response.json();
-            if (!response.ok || (data && data.error)) {
-              return { error: data.error || "Request failed." };
-            }
-
-            return { request: data.request || null };
+            const request = await window.supabaseRequests.submitUrgentRequest(payload, requestId);
+            return { request };
           } catch (error) {
             const offlineRequest = {
               id: requestId || `req-${Date.now()}`,
@@ -187,18 +172,24 @@
           requests.forEach((req) => {
             const card = document.createElement("div");
             card.className = "request-card";
+            const bloodType = req.type || req.blood_type || "—";
+            const place = req.place || req.place_ward || "Unknown location";
+            const hospitalName = req.hospitalName || req.hospital_name || "Hospital request";
+            const hospitalLocation = req.hospitalLocation || req.hospital_location || "Location not set";
+            const requestedMinutes = req.requestedMinutes || 0;
+            const status = req.status || "open";
             card.innerHTML = `
               <div>
                 <div class="request-meta">
-                  <strong>${req.type || "—"}</strong>
-                  <span>${req.place || "Unknown location"}</span>
-                  <span class="status-pill ${req.status || "open"}">${formatStatusLabel(req.status)}</span>
+                  <strong>${bloodType}</strong>
+                  <span>${place}</span>
+                  <span class="status-pill ${status}">${formatStatusLabel(status)}</span>
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 14px;">
-                  ${req.hospitalName ? `${req.hospitalName} · ${req.hospitalLocation || "Location not set"}` : "Hospital request"}
+                  ${hospitalName} · ${hospitalLocation}
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 13px;">
-                  requested ${req.requestedMinutes || 0} minutes ago
+                  requested ${requestedMinutes} minutes ago
                 </div>
               </div>
               <div class="request-actions">
@@ -237,9 +228,9 @@
           const form = document.getElementById("request-form");
           if (!form) return;
           form.elements["requestId"].value = request.id || "";
-          form.elements["type"].value = request.type || "";
-          form.elements["place"].value = request.place || "";
-          form.elements["tag"].value = request.tag || "Urgent";
+          form.elements["type"].value = request.type || request.blood_type || "";
+          form.elements["place"].value = request.place || request.place_ward || "";
+          form.elements["tag"].value = request.tag || request.priority || "Urgent";
           if (form.elements["contact"]) form.elements["contact"].value = request.contact || "";
           const submitButton = form.querySelector("button[type='submit']");
           if (submitButton) submitButton.textContent = "Update request";
@@ -272,9 +263,9 @@
           renderHospitalRequests(requests);
         }
 
-        document
-          .getElementById("request-form")
-          .addEventListener("submit", async function (e) {
+        const requestForm = document.getElementById("request-form");
+        if (requestForm) {
+          requestForm.addEventListener("submit", async function (e) {
             e.preventDefault();
             const f = new FormData(e.target);
             const session = getStoredSession();
@@ -313,6 +304,7 @@
             resetFormState();
             loadRequests();
           });
+        }
 
         loadRequests();
       })();

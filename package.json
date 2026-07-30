@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package",
   "name": "lifelink-backend",
   "version": "1.0.0",
   "description": "Simple backend for LifeLink demo: auth and urgent requests",

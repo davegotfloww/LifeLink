@@ -112,6 +112,7 @@
               <div class="muted">Loading requests…</div>
             </div>
           </div>
+    <script src="script.js"></script>
           <script>
             (function () {
               const STORAGE_KEY = "lifelinkRequests";
@@ -159,11 +160,15 @@
                     ? String(req.priority).charAt(0).toUpperCase() + String(req.priority).slice(1)
                     : (req.tag ? String(req.tag).charAt(0).toUpperCase() + String(req.tag).slice(1) : "Urgent");
                   const priorityClass = (priorityLabel || "").toLowerCase() === "critical" ? "high" : (priorityLabel || "").toLowerCase() === "scheduled" ? "muted" : "";
+                  const bloodType = req.type || req.blood_type || "—";
+                  const place = req.place || req.place_ward || "Unknown location";
+                  const hospitalName = req.hospitalName || req.hospital_name || "";
+                  const hospitalLocation = req.hospitalLocation || req.hospital_location || "Unknown location";
                   item.innerHTML = `
-                    <div class="type-badge">${req.type || "—"}</div>
+                    <div class="type-badge">${bloodType}</div>
                     <div class="place">
-                      ${req.place || "Unknown location"}
-                      <span class="sub">${req.hospitalName ? `${req.hospitalName} · ` : ""}${req.hospitalLocation || "Unknown location"}</span>
+                      ${place}
+                      <span class="sub">${hospitalName ? `${hospitalName} · ` : ""}${hospitalLocation}</span>
                       <div class="contact">Contact: ${req.contact || "—"}</div>
                     </div>
                     <div class="priority ${priorityClass}">${priorityLabel}</div>
@@ -174,23 +179,22 @@
               }
 
               async function loadRequests(filters = new URLSearchParams()) {
+                const filterObject = {};
+                filters.forEach((value, key) => {
+                  if (value) filterObject[key] = value;
+                });
+
                 try {
-                  const url = new URL("/api/requests", window.location.origin);
-                  filters.forEach((value, key) => url.searchParams.set(key, value));
-
-                  const response = await fetch(url);
-                  if (!response.ok) throw new Error("no-api");
-
-                  const data = await response.json();
-                  if (data.requests && data.requests.length) {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.requests));
-                    renderRequestsFromData(data.requests);
+                  const requests = await window.supabaseRequests.fetchUrgentRequests(filterObject);
+                  if (requests && requests.length) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+                    renderRequestsFromData(requests);
                     return;
                   }
-
                   showFilterHint("No requests found with those filters.");
                   renderRequestsFromData([]);
                 } catch (error) {
+                  console.error(error);
                   const savedRequests = getStoredRequests();
                   if (savedRequests.length) {
                     renderRequestsFromData(savedRequests);
@@ -272,6 +276,5 @@
         </div>
       </div>
     </footer>
-    <script src="script.js"></script>
   </body>
 </html>

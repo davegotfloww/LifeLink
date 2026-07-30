@@ -8,10 +8,31 @@
 const supabaseUrl = "https://qkdqjtzlkzfwwlyocvlo.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrZHFqdHpsa3pmd3dseW9jdmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMzgxNTksImV4cCI6MjEwMDgxNDE1OX0.B1gOHFIv5VPqvXvRb-dOiGBTbCuC2Jpya1_s-pLUcyI";
 
-const supabase = window.supabase.createClient(
-    supabaseUrl,
-    supabaseKey
-);
+let supabase = null;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve(script);
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureSupabase() {
+  if (supabase) return supabase;
+  if (!window.supabase) {
+    await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js");
+  }
+  if (!window.supabase?.createClient) {
+    throw new Error("Supabase client is unavailable.");
+  }
+  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  return supabase;
+}
+
 (function () {
   "use strict";
 
@@ -278,21 +299,6 @@ const supabase = window.supabase.createClient(
     );
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 7. Local auth flow for donors and hospitals                       */
-  /* ------------------------------------------------------------------ */
-  function getStoredUsers() {
-    try {
-      return JSON.parse(localStorage.getItem("lifelinkUsers")) || [];
-    } catch (error) {
-      return [];
-    }
-  }
-
-  function saveStoredUsers(users) {
-    localStorage.setItem("lifelinkUsers", JSON.stringify(users));
-  }
-
   function getStoredSession() {
     try {
       return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
@@ -308,6 +314,78 @@ const supabase = window.supabase.createClient(
   function clearStoredSession() {
     localStorage.removeItem("lifelinkCurrentUser");
   }
+
+  async function fetchUrgentRequests(filters = {}) {
+    const client = await ensureSupabase();
+
+    let query = client
+      .from("urgent_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (filters.status) query = query.eq("status", filters.status);
+    if (filters.type) query = query.ilike("blood_type", `%${filters.type}%`);
+    if (filters.place) query = query.ilike("place_ward", `%${filters.place}%`);
+    if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function submitUrgentRequest(payload, requestId = null) {
+    const client = await ensureSupabase();
+
+    const body = {
+      hospital_name: payload.hospitalName || null,
+      blood_type: payload.bloodType || null,
+      place_ward: payload.place || null,
+      priority: payload.priority || payload.tag || "Urgent",
+      contact: payload.contact || null,
+      message: payload.message || null,
+      status: payload.status || "open",
+      hospital_id: payload.hospitalId || null,
+      hospital_location: payload.hospitalLocation || null,
+    };
+
+    if (requestId) {
+      const { data, error } = await client
+        .from("urgent_requests")
+        .update(body)
+        .eq("id", requestId);
+
+      if (error) throw error;
+      return (data || [])[0] || null;
+    }
+
+    const { data, error } = await client.from("urgent_requests").insert([body]);
+
+    if (error) throw error;
+    return (data || [])[0] || null;
+  }
+
+  async function createUrgentRequest(request) {
+    const client = await ensureSupabase();
+
+    const { data, error } = await client.from("urgent_requests").insert({
+      hospital_name: request.hospital_name,
+      blood_type: request.blood_type,
+      place_ward: request.place_ward,
+      priority: request.priority,
+      contact: request.contact,
+      message: request.message,
+      status: "open",
+    });
+
+    if (error) throw error;
+    return (data || [])[0] || null;
+  }
+
+  window.supabaseRequests = {
+    fetchUrgentRequests,
+    submitUrgentRequest,
+    createUrgentRequest,
+  };
 
   function isAuthPage() {
     const path = window.location.pathname.split("/").pop().toLowerCase();
@@ -424,34 +502,11 @@ const supabase = window.supabase.createClient(
       if (submitBtn) submitBtn.addEventListener("click", () => console.log("Signup button clicked"));
     }
 
-    // API wrapper — if backend exists, prefer it; otherwise fall back to localStorage
-    let apiAvailable = false;
-    async function checkApi() {
-      try {
-        const r = await fetch("/api/ping");
-        apiAvailable = r.ok;
-      } catch (e) {
-        apiAvailable = false;
-      }
-    }
-    checkApi();
-
-    async function apiSignup(payload) {
-      try {
-        const r = await fetch("/api/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        return await r.json();
-      } catch (e) {
-        return { error: "network" };
-      }
-    }
 
     async function signUpUser(formData) {
       console.log("signUpUser.start", formData);
-      const { data, error } = await supabase.auth.signUp({
+      const client = await ensureSupabase();
+      const { data, error } = await client.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
@@ -471,7 +526,7 @@ const supabase = window.supabase.createClient(
         return true;
       }
 
-      const { error: profileError } = await supabase
+      const { error: profileError } = await client
         .from("profiles")
         .insert({
           id: user.id,
@@ -481,6 +536,7 @@ const supabase = window.supabase.createClient(
           hospital_name: formData.hospital_name || null,
           blood_type: formData.blood_type || null,
           phone: formData.phone || null,
+          location: formData.location || null,
         });
 
       if (profileError) {
@@ -493,82 +549,57 @@ const supabase = window.supabase.createClient(
     }
 
     async function loginUser(email, password) {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const client = await ensureSupabase();
+      const { data, error } = await client.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
-        alert(error.message);
-        return;
+        setMessage(error.message, "error");
+        return false;
       }
 
       const user = data.user;
+      if (!user) {
+        setMessage("Login failed. Please try again.", "error");
+        return false;
+      }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await client
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
       if (profileError) {
-        alert(profileError.message);
-        return;
+        setMessage(profileError.message, "error");
+        return false;
       }
 
-      if (String(profile.user_type || "").toLowerCase() === "hospital") {
-        window.location.href = "hospital-dashboard.html";
+      const currentUser = {
+        id: user.id,
+        name: profile.full_name || "",
+        email: profile.email || user.email,
+        role: String(profile.user_type || "donor").toLowerCase(),
+        location: profile.location || "",
+        bloodType: profile.blood_type || "",
+        hospitalName: profile.hospital_name || "",
+        contact: profile.phone || "",
+      };
+
+      setStoredSession(currentUser);
+      renderSession();
+      renderUserIsland();
+      setMessage(`Welcome back, ${currentUser.name || "there"}.`, "success");
+
+      if (currentUser.role === "hospital") {
+        window.location.replace("hospital-dashboard.html");
       } else {
-        window.location.href = "dashboard.html";
-      }
-    }
-
-    async function apiLogin(payload) {
-      try {
-        const r = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        return await r.json();
-      } catch (e) {
-        return { error: "network" };
-      }
-    }
-
-    async function apiGetRequests() {
-      const { data: requests, error } = await supabase
-        .from("urgent_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error(error);
-        return { requests: [] };
+        window.location.replace("dashboard.html");
       }
 
-      return { requests };
-    }
-
-    async function createUrgentRequest(request) {
-      const { error } = await supabase
-        .from("urgent_requests")
-        .insert({
-          hospital_name: request.hospital_name,
-          blood_type: request.blood_type,
-          place_ward: request.place_ward,
-          priority: request.priority,
-          contact: request.contact,
-          message: request.message,
-          status: "Active",
-        });
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      alert("Urgent request submitted!");
+      return true;
     }
 
     function showTab(target) {
@@ -744,23 +775,8 @@ const supabase = window.supabase.createClient(
             return;
           }
 
-          await checkApi();
-          if (apiAvailable) {
-            const resp = await apiLogin({ email, password });
-            if (resp && resp.error) {
-              setMessage(resp.error || "Login failed", "error");
-              return;
-            }
-            const u = resp.user || resp;
-            setStoredSession(u);
-            renderSession();
-            renderUserIsland();
-            setMessage(`Welcome back, ${u.name}.`, "success");
-            window.location.replace("dashboard.html");
-            return;
-          }
-
-          await loginUser(email, password);
+          const success = await loginUser(email, password);
+          if (!success) return;
           return;
         }
       });
