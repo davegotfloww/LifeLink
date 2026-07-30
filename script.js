@@ -417,6 +417,14 @@ const supabase = window.supabase.createClient(
       messageBox.className = `auth-message ${type}`;
     }
 
+    // Debug: log auth form presence and supabase availability
+    console.log("initAuth: signupForm=", !!signupForm, "loginForm=", !!loginForm, "supabase=", typeof window.supabase !== "undefined");
+    if (signupForm) {
+      console.log("signup form detected", signupForm);
+      const submitBtn = signupForm.querySelector("button[type='submit']");
+      if (submitBtn) submitBtn.addEventListener("click", () => console.log("Signup button clicked"));
+    }
+
     // API wrapper — if backend exists, prefer it; otherwise fall back to localStorage
     let apiAvailable = false;
     async function checkApi() {
@@ -443,21 +451,25 @@ const supabase = window.supabase.createClient(
     }
 
     async function signUpUser(formData) {
+      console.log("signUpUser.start", formData);
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
+      console.log("signUpUser.supabaseResponse", data, error);
       if (error) {
-        alert(error.message);
-        return;
+        setMessage(error.message, "error");
+        return false;
       }
 
       const user = data.user;
-
       if (!user) {
-        alert("Please check your email to verify your account.");
-        return;
+        setMessage(
+          "Account created. Please check your email to verify your account before logging in.",
+          "success",
+        );
+        return true;
       }
 
       const { error: profileError } = await supabase
@@ -473,11 +485,12 @@ const supabase = window.supabase.createClient(
         });
 
       if (profileError) {
-        alert(profileError.message);
-        return;
+        setMessage(profileError.message, "error");
+        return false;
       }
 
-      alert("Account created successfully!");
+      setMessage("Account created successfully! You can now log in.", "success");
+      return true;
     }
 
     async function loginUser(email, password) {
@@ -525,26 +538,38 @@ const supabase = window.supabase.createClient(
     }
 
     async function apiGetRequests() {
-      try {
-        const r = await fetch("/api/requests");
-        if (!r.ok) return { requests: [] };
-        return await r.json();
-      } catch (e) {
+      const { data: requests, error } = await supabase
+        .from("urgent_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
         return { requests: [] };
       }
+
+      return { requests };
     }
 
-    async function apiCreateRequest(payload) {
-      try {
-        const r = await fetch("/api/requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+    async function createUrgentRequest(request) {
+      const { error } = await supabase
+        .from("urgent_requests")
+        .insert({
+          hospital_name: request.hospital_name,
+          blood_type: request.blood_type,
+          place_ward: request.place_ward,
+          priority: request.priority,
+          contact: request.contact,
+          message: request.message,
+          status: "Active",
         });
-        return await r.json();
-      } catch (e) {
-        return { error: "network" };
+
+      if (error) {
+        alert(error.message);
+        return;
       }
+
+      alert("Urgent request submitted!");
     }
 
     function showTab(target) {
@@ -565,14 +590,16 @@ const supabase = window.supabase.createClient(
       if (donorFields) {
         donorFields.hidden = role !== "donor";
         donorFields.setAttribute("aria-hidden", String(role !== "donor"));
-        const bloodInput = donorFields.querySelector("input");
-        if (bloodInput) bloodInput.required = role === "donor";
+        donorFields.querySelectorAll("input").forEach((input) => {
+          input.required = role === "donor";
+        });
       }
       if (hospitalFields) {
         hospitalFields.hidden = role !== "hospital";
         hospitalFields.setAttribute("aria-hidden", String(role !== "hospital"));
-        const hospitalInput = hospitalFields.querySelector("input");
-        if (hospitalInput) hospitalInput.required = role === "hospital";
+        hospitalFields.querySelectorAll("input").forEach((input) => {
+          input.required = role === "hospital";
+        });
       }
     }
 
@@ -623,107 +650,120 @@ const supabase = window.supabase.createClient(
       updateRoleFields();
     }
 
-    if (signupForm) {
-      signupForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
+    if (authApp) {
+      authApp.addEventListener("submit", async (event) => {
+        const target = event.target;
+        const form = target instanceof HTMLFormElement ? target : target.closest("form");
+        console.log("authApp submit event", target, form?.id);
+        if (!form) return;
 
-        const formData = new FormData(signupForm);
-        const payload = {
-          full_name: String(formData.get("name") || "").trim(),
-          user_type: String(formData.get("role") || "donor"),
-          email: String(formData.get("email") || "")
-            .trim()
-            .toLowerCase(),
-          password: String(formData.get("password") || ""),
-          confirmPassword: String(formData.get("confirmPassword") || ""),
-          blood_type: String(formData.get("bloodType") || "").trim(),
-          hospital_name: String(formData.get("hospitalName") || "").trim(),
-          phone: String(formData.get("contact") || "").trim(),
-        };
+        if (form.id === "signup-form") {
+          console.log("signup submit handler triggered");
+          event.preventDefault();
+          event.stopPropagation();
 
-        if (
-          !payload.full_name ||
-          !payload.email ||
-          !payload.password ||
-          !payload.confirmPassword ||
-          !String(formData.get("location") || "").trim()
-        ) {
-          setMessage(
-            "Please complete all required fields before continuing.",
-            "error",
-          );
-          return;
-        }
+          const formData = new FormData(form);
+          const payload = {
+            full_name: String(formData.get("name") || "").trim(),
+            user_type: String(formData.get("role") || "donor"),
+            email: String(formData.get("email") || "")
+              .trim()
+              .toLowerCase(),
+            password: String(formData.get("password") || ""),
+            confirmPassword: String(formData.get("confirmPassword") || ""),
+            blood_type: String(formData.get("bloodType") || "").trim(),
+            hospital_name: String(formData.get("hospitalName") || "").trim(),
+            phone: String(formData.get("contact") || "").trim(),
+            location: String(formData.get("location") || "").trim(),
+          };
 
-        if (payload.password.length < 6) {
-          setMessage("Choose a password with at least 6 characters.", "error");
-          return;
-        }
-
-        if (payload.password !== payload.confirmPassword) {
-          setMessage("Your password confirmation does not match.", "error");
-          return;
-        }
-
-        if (payload.user_type === "donor" && !payload.blood_type) {
-          setMessage(
-            "Please share your blood type so LifeLink can match you effectively.",
-            "error",
-          );
-          return;
-        }
-
-        if (payload.user_type === "hospital" && !payload.hospital_name) {
-          setMessage(
-            "Please share your hospital name so we can connect you appropriately.",
-            "error",
-          );
-          return;
-        }
-
-        try {
-          console.log("signup payload", payload);
-          await signUpUser(payload);
-        } catch (e) {
-          console.error(e);
-          alert("Signup failed: " + (e && e.message ? e.message : String(e)));
-        }
-      });
-    }
-
-    if (loginForm) {
-      loginForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const formData = new FormData(loginForm);
-        const email = String(formData.get("email") || "")
-          .trim()
-          .toLowerCase();
-        const password = String(formData.get("password") || "");
-
-        if (!email || !password) {
-          setMessage("Enter your email and password to continue.", "error");
-          return;
-        }
-
-        await checkApi();
-        if (apiAvailable) {
-          const resp = await apiLogin({ email, password });
-          if (resp && resp.error) {
-            setMessage(resp.error || "Login failed", "error");
+          if (
+            !payload.full_name ||
+            !payload.email ||
+            !payload.password ||
+            !payload.confirmPassword ||
+            !payload.location
+          ) {
+            setMessage(
+              "Please complete all required fields before continuing.",
+              "error",
+            );
             return;
           }
-          const u = resp.user || resp;
-          setStoredSession(u);
-          renderSession();
-          renderUserIsland();
-          setMessage(`Welcome back, ${u.name}.`, "success");
-          window.location.replace("dashboard.html");
+
+          if (payload.password.length < 6) {
+            setMessage("Choose a password with at least 6 characters.", "error");
+            return;
+          }
+
+          if (payload.password !== payload.confirmPassword) {
+            setMessage("Your password confirmation does not match.", "error");
+            return;
+          }
+
+          if (payload.user_type === "donor" && !payload.blood_type) {
+            setMessage(
+              "Please share your blood type so LifeLink can match you effectively.",
+              "error",
+            );
+            return;
+          }
+
+          if (payload.user_type === "hospital" && !payload.hospital_name) {
+            setMessage(
+              "Please share your hospital name so we can connect you appropriately.",
+              "error",
+            );
+            return;
+          }
+
+          try {
+            console.log("signup payload", payload);
+            const success = await signUpUser(payload);
+            if (success) {
+              showTab("login");
+            }
+          } catch (e) {
+            console.error(e);
+            setMessage("Signup failed. Please try again.", "error");
+          }
           return;
         }
 
-        await loginUser(email, password);
-        return;
+        if (form.id === "login-form") {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const formData = new FormData(form);
+          const email = String(formData.get("email") || "")
+            .trim()
+            .toLowerCase();
+          const password = String(formData.get("password") || "");
+
+          if (!email || !password) {
+            setMessage("Enter your email and password to continue.", "error");
+            return;
+          }
+
+          await checkApi();
+          if (apiAvailable) {
+            const resp = await apiLogin({ email, password });
+            if (resp && resp.error) {
+              setMessage(resp.error || "Login failed", "error");
+              return;
+            }
+            const u = resp.user || resp;
+            setStoredSession(u);
+            renderSession();
+            renderUserIsland();
+            setMessage(`Welcome back, ${u.name}.`, "success");
+            window.location.replace("dashboard.html");
+            return;
+          }
+
+          await loginUser(email, password);
+          return;
+        }
       });
     }
 
