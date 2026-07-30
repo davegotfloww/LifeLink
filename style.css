@@ -1057,12 +1057,6 @@ footer {
   .nav-links {
     display: none;
   }
-  .nav-toggle {
-    display: block;
-    background: none;
-    border: none;
-    color: var(--ink-text);
-  }
   .split {
     grid-template-columns: 1fr;
   }
