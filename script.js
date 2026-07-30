@@ -78,7 +78,6 @@ const supabase = window.supabase.createClient(
 
     const setOpen = (open) => {
       navLinks.classList.toggle("open", open);
-      toggle.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", String(open));
     };
 
