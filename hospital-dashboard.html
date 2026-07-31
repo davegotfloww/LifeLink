@@ -43,8 +43,8 @@
           <div class="eyebrow">Hospital dashboard</div>
           <h2>Post an urgent blood request</h2>
           <p>
-            Use this form to alert registered donors to an immediate need. This
-            now stores requests in Supabase.
+            Use this form to alert registered donors to an immediate need. For
+            demo, this sends data to the local backend.
           </p>
         </div>
 
@@ -71,10 +71,10 @@
                   <option>Scheduled</option>
                 </select>
               </label>
-              <label>
-                <span>Contact number</span>
-                <input name="contact" type="tel" placeholder="+233 24 000 0000" />
-              </label>
+              <label
+                ><span>Minutes since requested</span
+                ><input name="minutes" type="number" value="5"
+              /></label>
               <button class="btn btn-solid" type="submit">Post request</button>
               <div
                 id="request-msg"
@@ -91,7 +91,6 @@
         </div>
       </div>
     </main>
-    <script src="script.js"></script>
     <script>
       (function () {
         const STORAGE_KEY = "lifelinkRequests";
@@ -123,36 +122,37 @@
         }
 
         async function fetchHospitalRequests(hospitalId) {
-          try {
-            return await window.supabaseRequests.fetchUrgentRequests({ hospitalId });
-          } catch (error) {
-            console.error(error);
-            return getStoredRequests().filter((req) => String(req.hospitalId) === String(hospitalId));
-          }
+          return getStoredRequests().filter((req) => req.hospitalId === hospitalId);
         }
 
         async function submitRequest(payload, requestId) {
-          try {
-            const request = await window.supabaseRequests.submitUrgentRequest(payload, requestId);
-            return { request };
-          } catch (error) {
-            const offlineRequest = {
-              id: requestId || `req-${Date.now()}`,
-              type: payload.type,
-              place: payload.place,
-              tag: payload.tag || "Urgent",
-              requestedMinutes: payload.requestedMinutes || 0,
-              contact: payload.contact || null,
-              hospitalId: payload.hospitalId || null,
-              hospitalName: payload.hospitalName || null,
-              hospitalLocation: payload.hospitalLocation || null,
-              status: payload.status || "open",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            saveRequestLocally(offlineRequest);
-            return { request: offlineRequest, offline: true };
+          const requests = getStoredRequests();
+          if (requestId) {
+            const index = requests.findIndex((r) => r.id === requestId);
+            if (index !== -1) {
+              requests[index] = { ...requests[index], ...payload, updatedAt: new Date().toISOString() };
+              saveStoredRequests(requests);
+              return { request: requests[index] };
+            }
+            return { error: "Request not found." };
           }
+
+          const newRequest = {
+            id: `req-${Date.now()}`,
+            type: payload.type,
+            place: payload.place,
+            tag: payload.tag || "Urgent",
+            requestedMinutes: payload.requestedMinutes || 0,
+            hospitalId: payload.hospitalId || null,
+            hospitalName: payload.hospitalName || null,
+            hospitalLocation: payload.hospitalLocation || null,
+            status: payload.status || "open",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          requests.unshift(newRequest);
+          saveStoredRequests(requests);
+          return { request: newRequest };
         }
 
         function formatStatusLabel(status) {
@@ -172,24 +172,18 @@
           requests.forEach((req) => {
             const card = document.createElement("div");
             card.className = "request-card";
-            const bloodType = req.type || req.blood_type || "—";
-            const place = req.place || req.place_ward || "Unknown location";
-            const hospitalName = req.hospitalName || req.hospital_name || "Hospital request";
-            const hospitalLocation = req.hospitalLocation || req.hospital_location || "Location not set";
-            const requestedMinutes = req.requestedMinutes || 0;
-            const status = req.status || "open";
             card.innerHTML = `
               <div>
                 <div class="request-meta">
-                  <strong>${bloodType}</strong>
-                  <span>${place}</span>
-                  <span class="status-pill ${status}">${formatStatusLabel(status)}</span>
+                  <strong>${req.type || "—"}</strong>
+                  <span>${req.place || "Unknown location"}</span>
+                  <span class="status-pill ${req.status || "open"}">${formatStatusLabel(req.status)}</span>
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 14px;">
-                  ${hospitalName} · ${hospitalLocation}
+                  ${req.hospitalName ? `${req.hospitalName} · ${req.hospitalLocation || "Location not set"}` : "Hospital request"}
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 13px;">
-                  requested ${requestedMinutes} minutes ago
+                  requested ${req.requestedMinutes || 0} minutes ago
                 </div>
               </div>
               <div class="request-actions">
@@ -228,10 +222,10 @@
           const form = document.getElementById("request-form");
           if (!form) return;
           form.elements["requestId"].value = request.id || "";
-          form.elements["type"].value = request.type || request.blood_type || "";
-          form.elements["place"].value = request.place || request.place_ward || "";
-          form.elements["tag"].value = request.tag || request.priority || "Urgent";
-          if (form.elements["contact"]) form.elements["contact"].value = request.contact || "";
+          form.elements["type"].value = request.type || "";
+          form.elements["place"].value = request.place || "";
+          form.elements["tag"].value = request.tag || "Urgent";
+          form.elements["minutes"].value = request.requestedMinutes || 0;
           const submitButton = form.querySelector("button[type='submit']");
           if (submitButton) submitButton.textContent = "Update request";
           showRequestMessage("Editing request. Save to apply changes.", "success");
@@ -263,9 +257,9 @@
           renderHospitalRequests(requests);
         }
 
-        const requestForm = document.getElementById("request-form");
-        if (requestForm) {
-          requestForm.addEventListener("submit", async function (e) {
+        document
+          .getElementById("request-form")
+          .addEventListener("submit", async function (e) {
             e.preventDefault();
             const f = new FormData(e.target);
             const session = getStoredSession();
@@ -275,7 +269,6 @@
               place: String(f.get("place") || "").trim(),
               tag: String(f.get("tag") || "Urgent"),
               requestedMinutes: Number(f.get("minutes") || 0),
-              contact: String(f.get("contact") || (session ? session.contact || "" : "")).trim(),
               hospitalId: session ? session.id : null,
               hospitalName: session ? session.hospitalName || session.name : null,
               hospitalLocation: session ? session.location : null,
@@ -304,7 +297,6 @@
             resetFormState();
             loadRequests();
           });
-        }
 
         loadRequests();
       })();

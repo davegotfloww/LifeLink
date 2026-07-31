@@ -5,33 +5,6 @@
    Adds its own minimal stylesheet for new states so the existing <style>
    block in the HTML doesn't need to be touched.
    ========================================================================== */
-const supabaseUrl = "https://qkdqjtzlkzfwwlyocvlo.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrZHFqdHpsa3pmd3dseW9jdmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMzgxNTksImV4cCI6MjEwMDgxNDE1OX0.B1gOHFIv5VPqvXvRb-dOiGBTbCuC2Jpya1_s-pLUcyI";
-
-let supabase = null;
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = () => resolve(script);
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-    document.head.appendChild(script);
-  });
-}
-
-async function ensureSupabase() {
-  if (supabase) return supabase;
-  if (!window.supabase) {
-    await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js");
-  }
-  if (!window.supabase?.createClient) {
-    throw new Error("Supabase client is unavailable.");
-  }
-  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-  return supabase;
-}
 
 (function () {
   "use strict";
@@ -99,6 +72,7 @@ async function ensureSupabase() {
 
     const setOpen = (open) => {
       navLinks.classList.toggle("open", open);
+      toggle.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", String(open));
     };
 
@@ -299,6 +273,21 @@ async function ensureSupabase() {
     );
   }
 
+  /* ------------------------------------------------------------------ */
+  /* 7. Local auth flow for donors and hospitals                       */
+  /* ------------------------------------------------------------------ */
+  function getStoredUsers() {
+    try {
+      return JSON.parse(localStorage.getItem("lifelinkUsers")) || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveStoredUsers(users) {
+    localStorage.setItem("lifelinkUsers", JSON.stringify(users));
+  }
+
   function getStoredSession() {
     try {
       return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
@@ -314,78 +303,6 @@ async function ensureSupabase() {
   function clearStoredSession() {
     localStorage.removeItem("lifelinkCurrentUser");
   }
-
-  async function fetchUrgentRequests(filters = {}) {
-    const client = await ensureSupabase();
-
-    let query = client
-      .from("urgent_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (filters.status) query = query.eq("status", filters.status);
-    if (filters.type) query = query.ilike("blood_type", `%${filters.type}%`);
-    if (filters.place) query = query.ilike("place_ward", `%${filters.place}%`);
-    if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
-  }
-
-  async function submitUrgentRequest(payload, requestId = null) {
-    const client = await ensureSupabase();
-
-    const body = {
-      hospital_name: payload.hospitalName || null,
-      blood_type: payload.bloodType || null,
-      place_ward: payload.place || null,
-      priority: payload.priority || payload.tag || "Urgent",
-      contact: payload.contact || null,
-      message: payload.message || null,
-      status: payload.status || "open",
-      hospital_id: payload.hospitalId || null,
-      hospital_location: payload.hospitalLocation || null,
-    };
-
-    if (requestId) {
-      const { data, error } = await client
-        .from("urgent_requests")
-        .update(body)
-        .eq("id", requestId);
-
-      if (error) throw error;
-      return (data || [])[0] || null;
-    }
-
-    const { data, error } = await client.from("urgent_requests").insert([body]);
-
-    if (error) throw error;
-    return (data || [])[0] || null;
-  }
-
-  async function createUrgentRequest(request) {
-    const client = await ensureSupabase();
-
-    const { data, error } = await client.from("urgent_requests").insert({
-      hospital_name: request.hospital_name,
-      blood_type: request.blood_type,
-      place_ward: request.place_ward,
-      priority: request.priority,
-      contact: request.contact,
-      message: request.message,
-      status: "open",
-    });
-
-    if (error) throw error;
-    return (data || [])[0] || null;
-  }
-
-  window.supabaseRequests = {
-    fetchUrgentRequests,
-    submitUrgentRequest,
-    createUrgentRequest,
-  };
 
   function isAuthPage() {
     const path = window.location.pathname.split("/").pop().toLowerCase();
@@ -494,115 +411,8 @@ async function ensureSupabase() {
       messageBox.className = `auth-message ${type}`;
     }
 
-    // Debug: log auth form presence and supabase availability
-    console.log("initAuth: signupForm=", !!signupForm, "loginForm=", !!loginForm, "supabase=", typeof window.supabase !== "undefined");
-    if (signupForm) {
-      console.log("signup form detected", signupForm);
-      const submitBtn = signupForm.querySelector("button[type='submit']");
-      if (submitBtn) submitBtn.addEventListener("click", () => console.log("Signup button clicked"));
-    }
-
-
-    async function signUpUser(formData) {
-      console.log("signUpUser.start", formData);
-      const client = await ensureSupabase();
-      const { data, error } = await client.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      console.log("signUpUser.supabaseResponse", data, error);
-      if (error) {
-        setMessage(error.message, "error");
-        return false;
-      }
-
-      const user = data.user;
-      if (!user) {
-        setMessage(
-          "Account created. Please check your email to verify your account before logging in.",
-          "success",
-        );
-        return true;
-      }
-
-      const { error: profileError } = await client
-        .from("profiles")
-        .insert({
-          id: user.id,
-          full_name: formData.full_name,
-          email: formData.email,
-          user_type: formData.user_type,
-          hospital_name: formData.hospital_name || null,
-          blood_type: formData.blood_type || null,
-          phone: formData.phone || null,
-          location: formData.location || null,
-        });
-
-      if (profileError) {
-        setMessage(profileError.message, "error");
-        return false;
-      }
-
-      setMessage("Account created successfully! You can now log in.", "success");
-      return true;
-    }
-
-    async function loginUser(email, password) {
-      const client = await ensureSupabase();
-      const { data, error } = await client.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setMessage(error.message, "error");
-        return false;
-      }
-
-      const user = data.user;
-      if (!user) {
-        setMessage("Login failed. Please try again.", "error");
-        return false;
-      }
-
-      const { data: profile, error: profileError } = await client
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) {
-        setMessage(profileError.message, "error");
-        return false;
-      }
-
-      const currentUser = {
-        id: user.id,
-        name: profile.full_name || "",
-        email: profile.email || user.email,
-        role: String(profile.user_type || "donor").toLowerCase(),
-        location: profile.location || "",
-        bloodType: profile.blood_type || "",
-        hospitalName: profile.hospital_name || "",
-        contact: profile.phone || "",
-      };
-
-      setStoredSession(currentUser);
-      renderSession();
-      renderUserIsland();
-      setMessage(`Welcome back, ${currentUser.name || "there"}.`, "success");
-
-      if (currentUser.role === "hospital") {
-        window.location.replace("hospital-dashboard.html");
-      } else {
-        window.location.replace("dashboard.html");
-      }
-
-      return true;
-    }
-
-    function showTab(target) {
+    // Local auth flow for donors and hospitals                       */
+  /* ------------------------------------------------------------------ */
       tabs.forEach((tab) => {
         const isActive = tab.getAttribute("data-tab") === target;
         tab.classList.toggle("active", isActive);
@@ -620,16 +430,14 @@ async function ensureSupabase() {
       if (donorFields) {
         donorFields.hidden = role !== "donor";
         donorFields.setAttribute("aria-hidden", String(role !== "donor"));
-        donorFields.querySelectorAll("input").forEach((input) => {
-          input.required = role === "donor";
-        });
+        const bloodInput = donorFields.querySelector("input");
+        if (bloodInput) bloodInput.required = role === "donor";
       }
       if (hospitalFields) {
         hospitalFields.hidden = role !== "hospital";
         hospitalFields.setAttribute("aria-hidden", String(role !== "hospital"));
-        hospitalFields.querySelectorAll("input").forEach((input) => {
-          input.required = role === "hospital";
-        });
+        const hospitalInput = hospitalFields.querySelector("input");
+        if (hospitalInput) hospitalInput.required = role === "hospital";
       }
     }
 
@@ -680,105 +488,133 @@ async function ensureSupabase() {
       updateRoleFields();
     }
 
-    if (authApp) {
-      authApp.addEventListener("submit", async (event) => {
-        const target = event.target;
-        const form = target instanceof HTMLFormElement ? target : target.closest("form");
-        console.log("authApp submit event", target, form?.id);
-        if (!form) return;
+    if (signupForm) {
+      signupForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
-        if (form.id === "signup-form") {
-          console.log("signup submit handler triggered");
-          event.preventDefault();
-          event.stopPropagation();
+        const formData = new FormData(signupForm);
+        const name = String(formData.get("name") || "").trim();
+        const role = String(formData.get("role") || "donor");
+        const email = String(formData.get("email") || "")
+          .trim()
+          .toLowerCase();
+        const password = String(formData.get("password") || "");
+        const confirmPassword = String(formData.get("confirmPassword") || "");
+        const location = String(formData.get("location") || "").trim();
+        const bloodType = String(formData.get("bloodType") || "").trim();
+        const hospitalName = String(formData.get("hospitalName") || "").trim();
 
-          const formData = new FormData(form);
-          const payload = {
-            full_name: String(formData.get("name") || "").trim(),
-            user_type: String(formData.get("role") || "donor"),
-            email: String(formData.get("email") || "")
-              .trim()
-              .toLowerCase(),
-            password: String(formData.get("password") || ""),
-            confirmPassword: String(formData.get("confirmPassword") || ""),
-            blood_type: String(formData.get("bloodType") || "").trim(),
-            hospital_name: String(formData.get("hospitalName") || "").trim(),
-            phone: String(formData.get("contact") || "").trim(),
-            location: String(formData.get("location") || "").trim(),
-          };
-
-          if (
-            !payload.full_name ||
-            !payload.email ||
-            !payload.password ||
-            !payload.confirmPassword ||
-            !payload.location
-          ) {
-            setMessage(
-              "Please complete all required fields before continuing.",
-              "error",
-            );
-            return;
-          }
-
-          if (payload.password.length < 6) {
-            setMessage("Choose a password with at least 6 characters.", "error");
-            return;
-          }
-
-          if (payload.password !== payload.confirmPassword) {
-            setMessage("Your password confirmation does not match.", "error");
-            return;
-          }
-
-          if (payload.user_type === "donor" && !payload.blood_type) {
-            setMessage(
-              "Please share your blood type so LifeLink can match you effectively.",
-              "error",
-            );
-            return;
-          }
-
-          if (payload.user_type === "hospital" && !payload.hospital_name) {
-            setMessage(
-              "Please share your hospital name so we can connect you appropriately.",
-              "error",
-            );
-            return;
-          }
-
-          try {
-            console.log("signup payload", payload);
-            const success = await signUpUser(payload);
-            if (success) {
-              showTab("login");
-            }
-          } catch (e) {
-            console.error(e);
-            setMessage("Signup failed. Please try again.", "error");
-          }
+        if (!name || !email || !password || !confirmPassword || !location) {
+          setMessage(
+            "Please complete all required fields before continuing.",
+            "error",
+          );
           return;
         }
 
-        if (form.id === "login-form") {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const formData = new FormData(form);
-          const email = String(formData.get("email") || "")
-            .trim()
-            .toLowerCase();
-          const password = String(formData.get("password") || "");
-
-          if (!email || !password) {
-            setMessage("Enter your email and password to continue.", "error");
-            return;
-          }
-
-          const success = await loginUser(email, password);
-          if (!success) return;
+        if (password.length < 6) {
+          setMessage("Choose a password with at least 6 characters.", "error");
           return;
         }
+
+        if (password !== confirmPassword) {
+          setMessage("Your password confirmation does not match.", "error");
+          return;
+        }
+
+        if (role === "donor" && !bloodType) {
+          setMessage(
+            "Please share your blood type so LifeLink can match you effectively.",
+            "error",
+          );
+          return;
+        }
+
+        if (role === "hospital" && !hospitalName) {
+          setMessage(
+            "Please share your hospital name so we can connect you appropriately.",
+            "error",
+          );
+          return;
+        }
+
+        // Local storage signup
+        const users = getStoredUsers();
+        const existing = users.find(
+          (entry) => entry.email.toLowerCase() === email,
+        );
+        if (existing) {
+          setMessage(
+            "An account with that email already exists. Please log in instead.",
+            "error",
+          );
+          showTab("login");
+          if (loginEmail) loginEmail.value = email;
+          return;
+        }
+
+        const user = {
+          id: `${Date.now()}`,
+          name,
+          role,
+          email,
+          password,
+          location,
+          bloodType: role === "donor" ? bloodType : "",
+          hospitalName: role === "hospital" ? hospitalName : "",
+          createdAt: new Date().toISOString(),
+        };
+
+        users.push(user);
+        saveStoredUsers(users);
+        setStoredSession(user);
+        signupForm.reset();
+        updateRoleFields();
+        renderSession();
+        renderUserIsland();
+        setMessage(
+          `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
+          "success",
+        );
+        window.location.replace("dashboard.html");
+      });
+    }
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(loginForm);
+        const email = String(formData.get("email") || "")
+          .trim()
+          .toLowerCase();
+        const password = String(formData.get("password") || "");
+
+        if (!email || !password) {
+          setMessage("Enter your email and password to continue.", "error");
+          return;
+        }
+
+        // Local storage login
+        const users = getStoredUsers();
+        const match = users.find(
+          (entry) =>
+            entry.email.toLowerCase() === email && entry.password === password,
+        );
+
+        if (!match) {
+          setMessage(
+            "We could not find that account. Please check your details or sign up first.",
+            "error",
+          );
+          return;
+        }
+
+        setStoredSession(match);
+        renderSession();
+        renderUserIsland();
+        setMessage(`Welcome back, ${match.name}.`, "success");
+        window.location.replace("dashboard.html");
       });
     }
 

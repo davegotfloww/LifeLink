@@ -45,13 +45,9 @@
           <a href="becomeadonor.html" class="btn btn-solid">Become a donor</a>
         </div>
         <button class="nav-toggle" aria-label="Open menu">
-          <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
-            <path
-              d="M0 1H24M0 8H24M0 15H24"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-          </svg>
+          <span class="line"></span>
+          <span class="line"></span>
+          <span class="line"></span>
         </button>
       </nav>
     </header>
@@ -112,7 +108,6 @@
               <div class="muted">Loading requests…</div>
             </div>
           </div>
-    <script src="script.js"></script>
           <script>
             (function () {
               const STORAGE_KEY = "lifelinkRequests";
@@ -156,55 +151,42 @@
                 requests.forEach((req) => {
                   const item = document.createElement("div");
                   item.className = "urgent-item";
-                  const priorityLabel = req.priority
-                    ? String(req.priority).charAt(0).toUpperCase() + String(req.priority).slice(1)
-                    : (req.tag ? String(req.tag).charAt(0).toUpperCase() + String(req.tag).slice(1) : "Urgent");
-                  const priorityClass = (priorityLabel || "").toLowerCase() === "critical" ? "high" : (priorityLabel || "").toLowerCase() === "scheduled" ? "muted" : "";
-                  const bloodType = req.type || req.blood_type || "—";
-                  const place = req.place || req.place_ward || "Unknown location";
-                  const hospitalName = req.hospitalName || req.hospital_name || "";
-                  const hospitalLocation = req.hospitalLocation || req.hospital_location || "Unknown location";
+                  const tagLabel = req.status ? String(req.status).charAt(0).toUpperCase() + String(req.status).slice(1) : req.tag || "Urgent";
+                  const tagClass = req.status === "fulfilled" ? "high" : req.status === "cancelled" ? "" : (req.tag && req.tag.toLowerCase() === "critical" ? "high" : "");
                   item.innerHTML = `
-                    <div class="type-badge">${bloodType}</div>
+                    <div class="type-badge">${req.type || "—"}</div>
                     <div class="place">
-                      ${place}
-                      <span class="sub">${hospitalName ? `${hospitalName} · ` : ""}${hospitalLocation}</span>
-                      <div class="contact">Contact: ${req.contact || "—"}</div>
+                      ${req.place || "Unknown location"}
+                      <span class="sub">${req.hospitalName ? `${req.hospitalName} · ` : ""}${req.hospitalLocation || "Unknown location"} · requested ${req.requestedMinutes || 0} minutes ago</span>
                     </div>
-                    <div class="priority ${priorityClass}">${priorityLabel}</div>
+                    <div class="tag ${tagClass}">${tagLabel}</div>
                     <a href="becomeadonor.html" class="respond">Respond →</a>
                   `;
                   listElement.appendChild(item);
                 });
               }
 
-              async function loadRequests(filters = new URLSearchParams()) {
-                const filterObject = {};
-                filters.forEach((value, key) => {
-                  if (value) filterObject[key] = value;
-                });
+              function loadRequests(filters = new URLSearchParams()) {
+                let requests = getStoredRequests();
 
-                try {
-                  const requests = await window.supabaseRequests.fetchUrgentRequests(filterObject);
-                  if (requests && requests.length) {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-                    renderRequestsFromData(requests);
-                    return;
-                  }
-                  showFilterHint("No requests found with those filters.");
-                  renderRequestsFromData([]);
-                } catch (error) {
-                  console.error(error);
-                  const savedRequests = getStoredRequests();
-                  if (savedRequests.length) {
-                    renderRequestsFromData(savedRequests);
-                  } else {
-                    showFilterHint("No requests available offline.");
-                    if (listElement) {
-                      listElement.innerHTML = `<p class="muted">Unable to load requests.</p>`;
-                    }
-                  }
+                const type = filters.get("type");
+                const place = filters.get("place");
+                const status = filters.get("status");
+
+                if (type) {
+                  const typeLower = type.toLowerCase();
+                  requests = requests.filter((r) => String(r.type || "").toLowerCase().includes(typeLower));
                 }
+                if (place) {
+                  const placeLower = place.toLowerCase();
+                  requests = requests.filter((r) => String(r.place || "").toLowerCase().includes(placeLower));
+                }
+                if (status) {
+                  const statusLower = status.toLowerCase();
+                  requests = requests.filter((r) => String(r.status || "open").toLowerCase() === statusLower);
+                }
+
+                renderRequestsFromData(requests);
               }
 
               function buildFilters() {
@@ -220,7 +202,7 @@
                 return query;
               }
 
-              async function init() {
+              function init() {
                 const session = getStoredSession();
                 if (session && session.role === "donor" && filterForm) {
                   const typeInput = filterForm.querySelector("input[name='type']");
@@ -233,11 +215,11 @@
                 if (filterForm) {
                   filterForm.addEventListener("submit", async (event) => {
                     event.preventDefault();
-                    await loadRequests(buildFilters());
+                    loadRequests(buildFilters());
                   });
                 }
 
-                await loadRequests(buildFilters());
+                loadRequests(buildFilters());
               }
 
               document.addEventListener("DOMContentLoaded", init);
@@ -276,5 +258,6 @@
         </div>
       </div>
     </footer>
+    <script src="script.js"></script>
   </body>
 </html>

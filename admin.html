@@ -50,64 +50,65 @@
       </div>
     </main>
     <script>
+      function getStoredUsers() {
+        try {
+          return JSON.parse(localStorage.getItem("lifelinkUsers")) || [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveStoredUsers(users) {
+        localStorage.setItem("lifelinkUsers", JSON.stringify(users));
+      }
+
       document
         .getElementById("fetch-users")
         .addEventListener("click", async function () {
           const key = document.getElementById("admin-key").value.trim();
           const msg = document.getElementById("admin-msg");
           msg.textContent = "";
-          try {
-            const r = await fetch(
-              "/api/admin/users?key=" + encodeURIComponent(key),
-            );
-            if (!r.ok) {
-              msg.textContent = "Unauthorized";
-              return;
-            }
-            const data = await r.json();
-            const list = document.getElementById("users-list");
-            list.innerHTML = "";
-            data.users.forEach((u) => {
-              const row = document.createElement("div");
-              row.style.padding = "12px 0";
-              row.style.borderBottom = "1px solid rgba(0,0,0,0.06)";
-              row.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-weight:700">${u.name} ${u.role === "hospital" && !u.verified ? '<span style=\"color:#a8192a;font-weight:700;margin-left:8px\">(unverified)</span>' : ""}</div>
-                <div style="font-size:13px;color:#666">${u.email} · ${u.role} · ${u.location || ""}</div>
-              </div>
-              <div>
-                ${u.role === "hospital" ? `<button class="btn btn-line" data-user="${u.id}">${u.verified ? "Revoke verification" : "Verify hospital"}</button>` : ""}
-              </div>
-            </div>
-          `;
-              list.appendChild(row);
-            });
-            // attach handlers
-            list.querySelectorAll("button[data-user]").forEach((btn) => {
-              btn.addEventListener("click", async () => {
-                const userId = btn.getAttribute("data-user");
-                const verify = btn.textContent.includes("Verify");
-                const r2 = await fetch("/api/admin/verify-user", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId, verify, key }),
-                });
-                if (!r2.ok) {
-                  msg.textContent = "Action failed";
-                  return;
-                }
-                const out = await r2.json();
-                msg.textContent = "Updated";
-                btn.textContent = out.user.verified
-                  ? "Revoke verification"
-                  : "Verify hospital";
-              });
-            });
-          } catch (err) {
-            msg.textContent = "Error";
+
+          if (key !== "dev-admin-key") {
+            msg.textContent = "Unauthorized";
+            return;
           }
+
+          const data = getStoredUsers();
+          const list = document.getElementById("users-list");
+          list.innerHTML = "";
+          data.forEach((u) => {
+            const row = document.createElement("div");
+            row.style.padding = "12px 0";
+            row.style.borderBottom = "1px solid rgba(0,0,0,0.06)";
+            row.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:700">${u.name} ${u.role === "hospital" && !u.verified ? '<span style=\"color:#a8192a;font-weight:700;margin-left:8px\">(unverified)</span>' : ""}</div>
+                  <div style="font-size:13px;color:#666">${u.email} · ${u.role} · ${u.location || ""}</div>
+                </div>
+                <div>
+                  ${u.role === "hospital" ? `<button class="btn btn-line" data-user="${u.id}">${u.verified ? "Revoke verification" : "Verify hospital"}</button>` : ""}
+                </div>
+              </div>
+            `;
+            list.appendChild(row);
+          });
+
+          list.querySelectorAll("button[data-user]").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const userId = btn.getAttribute("data-user");
+              const verify = btn.textContent.includes("Verify");
+              const users = getStoredUsers();
+              const user = users.find((u) => u.id === userId);
+              if (user) {
+                user.verified = verify;
+                saveStoredUsers(users);
+                msg.textContent = "Updated";
+                btn.textContent = user.verified ? "Revoke verification" : "Verify hospital";
+              }
+            });
+          });
         });
     </script>
   </body>
