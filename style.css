@@ -291,13 +291,17 @@ nav.wrap { position: relative; }
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: rgba(255,255,255,0.9);
-  color: var(--ink-text);
+  border-radius: 10px;
+  border: 1px solid var(--hair);
+  background: linear-gradient(180deg, #ffffff, #fbf9f8);
+  color: var(--crimson);
   cursor: pointer;
+  box-shadow: 0 8px 22px rgba(21,18,26,0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.hero-access-toggle svg { opacity: 0.9; }
+.hero-access-toggle:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(21,18,26,0.10); }
+.hero-access-toggle:focus-visible { outline: 3px solid rgba(168,25,42,0.12); outline-offset: 2px; }
+.hero-access-toggle svg { opacity: 1; width: 14px; height: 14px; stroke: var(--crimson); fill: var(--crimson); }
 
 .hero-action-menu {
   position: absolute;
@@ -684,7 +688,8 @@ section {
 }
 
 @media (max-width: 900px) {
-  .nav-toggle { display: inline-flex; }
+  /* hide the regular hamburger in favor of the hero-access button */
+  .nav-toggle { display: none; }
   .nav-links { display: none; }
   .nav-links.open { display: flex; }
   .nav-cta { display: none; }
