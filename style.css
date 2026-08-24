@@ -694,6 +694,8 @@ section {
   .nav-links.open { display: flex; }
   .nav-cta { display: none; }
   .hero-access-toggle { display: inline-flex; }
+  /* disable the moving pulse line on mobile for cleaner layout */
+  .pulse-line { animation: none; }
   .dashboard-grid {
     grid-template-columns: 1fr;
   }

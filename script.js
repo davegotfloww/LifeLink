@@ -660,10 +660,22 @@
 
     // populate menu with the hero actions
     menu.innerHTML = heroActions.innerHTML;
+    // ensure closed initially
+    menu.hidden = true;
+    menu.style.display = "none";
 
     const setOpen = (open) => {
-      menu.hidden = !open;
+      if (open) {
+        menu.classList.add("open");
+        menu.hidden = false;
+        menu.style.display = "block";
+      } else {
+        menu.classList.remove("open");
+        menu.hidden = true;
+        menu.style.display = "none";
+      }
       menu.setAttribute("aria-hidden", String(!open));
+      toggle.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", String(open));
     };
 
