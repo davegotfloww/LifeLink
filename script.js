@@ -411,8 +411,10 @@
       messageBox.className = `auth-message ${type}`;
     }
 
-    // Local auth flow for donors and hospitals                       */
-  /* ------------------------------------------------------------------ */
+    // Local auth flow for donors and hospitals
+    /* ------------------------------------------------------------------ */
+    function showTab(target = "login") {
+      if (!tabs || !panels) return;
       tabs.forEach((tab) => {
         const isActive = tab.getAttribute("data-tab") === target;
         tab.classList.toggle("active", isActive);
