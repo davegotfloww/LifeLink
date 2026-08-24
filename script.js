@@ -646,5 +646,48 @@
     initFooterYear();
     renderUserIsland();
     initAuth();
+    initHeroAccess();
   });
+
+  /* ------------------------------------------------------------------ */
+  /* 8. Mobile hero-actions quick access toggle                          */
+  /* ------------------------------------------------------------------ */
+  function initHeroAccess() {
+    const toggle = document.getElementById("hero-access-toggle");
+    const menu = document.getElementById("hero-action-menu");
+    const heroActions = document.querySelector(".hero .hero-actions");
+    if (!toggle || !menu || !heroActions) return;
+
+    // populate menu with the hero actions
+    menu.innerHTML = heroActions.innerHTML;
+
+    const setOpen = (open) => {
+      menu.hidden = !open;
+      menu.setAttribute("aria-hidden", String(!open));
+      toggle.setAttribute("aria-expanded", String(open));
+    };
+
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setOpen(!menu.hidden);
+    });
+
+    // close when clicking a menu link
+    menu.querySelectorAll("a").forEach((a) => {
+      a.addEventListener("click", () => setOpen(false));
+    });
+
+    // close on outside click or Escape
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !toggle.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setOpen(false);
+    });
+
+    // hide menu when resizing to desktop
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 900) setOpen(false);
+    });
+  }
 })();
