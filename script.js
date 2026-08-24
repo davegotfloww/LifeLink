@@ -658,14 +658,32 @@
     const heroActions = document.querySelector(".hero .hero-actions");
     if (!toggle || !menu || !heroActions) return;
 
-    // populate menu with the hero actions
+    // populate menu with the hero actions and move it to the document body
     menu.innerHTML = heroActions.innerHTML;
-    // ensure closed initially
+    if (menu.parentElement !== document.body) document.body.appendChild(menu);
+    // use fixed positioning so it's not clipped by header/nav
+    menu.style.position = "fixed";
+    menu.style.zIndex = "9999";
     menu.hidden = true;
     menu.style.display = "none";
 
+    const positionMenu = () => {
+      const rect = toggle.getBoundingClientRect();
+      // place menu below the toggle, aligned to its right
+      const top = Math.min(window.innerHeight - 8, rect.bottom + 8);
+      const left = Math.max(8, rect.left - 160 + rect.width);
+      menu.style.top = `${top}px`;
+      menu.style.left = `${left}px`;
+      // ensure menu doesn't overflow right edge
+      const mw = menu.getBoundingClientRect().width;
+      if (left + mw > window.innerWidth - 8) {
+        menu.style.left = `${Math.max(8, window.innerWidth - mw - 8)}px`;
+      }
+    };
+
     const setOpen = (open) => {
       if (open) {
+        positionMenu();
         menu.classList.add("open");
         menu.hidden = false;
         menu.style.display = "block";
@@ -685,7 +703,8 @@
     });
 
     // close when clicking a menu link
-    menu.querySelectorAll("a").forEach((a) => {
+    const menuLinks = menu.querySelectorAll("a");
+    menuLinks.forEach((a) => {
       a.addEventListener("click", () => setOpen(false));
     });
 
@@ -697,9 +716,13 @@
       if (e.key === "Escape") setOpen(false);
     });
 
-    // hide menu when resizing to desktop
+    // reposition on scroll/resize and hide on desktop
     window.addEventListener("resize", () => {
       if (window.innerWidth > 900) setOpen(false);
+      if (!menu.hidden) positionMenu();
     });
+    window.addEventListener("scroll", () => {
+      if (!menu.hidden) positionMenu();
+    }, { passive: true });
   }
 })();

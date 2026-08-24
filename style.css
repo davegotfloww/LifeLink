@@ -1104,8 +1104,7 @@ footer {
     grid-template-columns: 1fr;
   }
   .pulse-col {
-    transform: rotate(90deg);
-    padding: 20px 0;
+    display: none;
   }
   .split-col.donor,
   .split-col.patient {
