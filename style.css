@@ -317,6 +317,26 @@ nav.wrap { position: relative; }
 }
 .hero-action-menu .btn { width: 100%; justify-content: center; }
 
+/* show/hide via body class for more reliable toggling */
+body.hero-actions-open .hero-action-menu { display: block !important; }
+/* keep hidden by default when JS not toggled */
+.hero-action-menu { display: none; }
+
+@media (max-width: 420px) {
+  .hero-action-menu {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: 16px !important;
+    min-width: auto !important;
+    width: calc(100% - 24px) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    box-shadow: 0 18px 48px rgba(21,18,26,0.12) !important;
+  }
+}
+
 
 /* ---------- HERO ---------- */
 .hero {

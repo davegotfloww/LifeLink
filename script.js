@@ -654,75 +654,78 @@
   /* ------------------------------------------------------------------ */
   function initHeroAccess() {
     const toggle = document.getElementById("hero-access-toggle");
-    const menu = document.getElementById("hero-action-menu");
-    const heroActions = document.querySelector(".hero .hero-actions");
-    if (!toggle || !menu || !heroActions) return;
+    const originalHero = document.querySelector(".hero .hero-actions");
+    if (!toggle || !originalHero) return;
 
-    // populate menu with the hero actions and move it to the document body
-    menu.innerHTML = heroActions.innerHTML;
-    if (menu.parentElement !== document.body) document.body.appendChild(menu);
-    // use fixed positioning so it's not clipped by header/nav
-    menu.style.position = "fixed";
-    menu.style.zIndex = "9999";
-    menu.hidden = true;
-    menu.style.display = "none";
+    // create a cloned menu appended to body for reliable positioning
+    let menu = document.getElementById("hero-action-menu-clone");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.id = "hero-action-menu-clone";
+      menu.className = "hero-action-menu";
+      menu.innerHTML = originalHero.innerHTML;
+      document.body.appendChild(menu);
+    }
 
     const positionMenu = () => {
+      // on very small screens, menu will be full-width and anchored to bottom via CSS
+      if (window.innerWidth <= 420) {
+        menu.style.left = "12px";
+        menu.style.right = "12px";
+        menu.style.top = "auto";
+        menu.style.bottom = "16px";
+        menu.style.position = "fixed";
+        return;
+      }
       const rect = toggle.getBoundingClientRect();
-      // place menu below the toggle, aligned to its right
-      const top = Math.min(window.innerHeight - 8, rect.bottom + 8);
-      const left = Math.max(8, rect.left - 160 + rect.width);
+      menu.style.position = "fixed";
+      const top = rect.bottom + 8;
+      let left = rect.right - 200;
+      if (left + 220 > window.innerWidth) left = window.innerWidth - 220 - 8;
+      if (left < 8) left = 8;
       menu.style.top = `${top}px`;
       menu.style.left = `${left}px`;
-      // ensure menu doesn't overflow right edge
-      const mw = menu.getBoundingClientRect().width;
-      if (left + mw > window.innerWidth - 8) {
-        menu.style.left = `${Math.max(8, window.innerWidth - mw - 8)}px`;
-      }
+      menu.style.bottom = "auto";
     };
 
-    const setOpen = (open) => {
-      if (open) {
-        positionMenu();
-        menu.classList.add("open");
-        menu.hidden = false;
-        menu.style.display = "block";
-      } else {
-        menu.classList.remove("open");
-        menu.hidden = true;
-        menu.style.display = "none";
-      }
-      menu.setAttribute("aria-hidden", String(!open));
-      toggle.classList.toggle("open", open);
-      toggle.setAttribute("aria-expanded", String(open));
+    const openMenu = () => {
+      positionMenu();
+      document.body.classList.add("hero-actions-open");
+      menu.classList.add("open");
+      menu.setAttribute("aria-hidden", "false");
+      toggle.setAttribute("aria-expanded", "true");
+    };
+    const closeMenu = () => {
+      document.body.classList.remove("hero-actions-open");
+      menu.classList.remove("open");
+      menu.setAttribute("aria-hidden", "true");
+      toggle.setAttribute("aria-expanded", "false");
     };
 
     toggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      setOpen(!menu.hidden);
+      if (document.body.classList.contains("hero-actions-open")) closeMenu();
+      else openMenu();
     });
 
     // close when clicking a menu link
-    const menuLinks = menu.querySelectorAll("a");
-    menuLinks.forEach((a) => {
-      a.addEventListener("click", () => setOpen(false));
-    });
+    menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
 
     // close on outside click or Escape
     document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target) && !toggle.contains(e.target)) setOpen(false);
+      if (!menu.contains(e.target) && !toggle.contains(e.target)) closeMenu();
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeMenu();
     });
 
-    // reposition on scroll/resize and hide on desktop
+    // reposition on resize/scroll
     window.addEventListener("resize", () => {
-      if (window.innerWidth > 900) setOpen(false);
-      if (!menu.hidden) positionMenu();
+      if (window.innerWidth > 900) closeMenu();
+      if (document.body.classList.contains("hero-actions-open")) positionMenu();
     });
     window.addEventListener("scroll", () => {
-      if (!menu.hidden) positionMenu();
+      if (document.body.classList.contains("hero-actions-open")) positionMenu();
     }, { passive: true });
   }
 })();
