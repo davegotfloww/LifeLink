@@ -654,78 +654,126 @@
   /* ------------------------------------------------------------------ */
   function initHeroAccess() {
     const toggle = document.getElementById("hero-access-toggle");
-    const originalHero = document.querySelector(".hero .hero-actions");
-    if (!toggle || !originalHero) return;
+    if (!toggle) return;
 
-    // create a cloned menu appended to body for reliable positioning
     let menu = document.getElementById("hero-action-menu-clone");
     if (!menu) {
       menu = document.createElement("div");
       menu.id = "hero-action-menu-clone";
       menu.className = "hero-action-menu";
-      menu.innerHTML = originalHero.innerHTML;
       document.body.appendChild(menu);
     }
 
+    const getNavMenuLinks = () => {
+      const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+      if (!navLinks.length) return [];
+
+      return navLinks
+        .filter((link) => {
+          const href = link.getAttribute('href') || '';
+          return href !== 'auth.html';
+        })
+        .map((link) => ({
+          label: link.textContent.trim(),
+          href: link.getAttribute('href') || '#',
+        }));
+    };
+
+    const syncMenuContent = () => {
+      const links = getNavMenuLinks();
+      if (!links.length) {
+        menu.innerHTML = '<a href="index.html" class="btn btn-line on-ink">Home</a>';
+      } else {
+        menu.innerHTML = links
+          .map(
+            (link) => `<a href="${link.href}" class="btn btn-line on-ink">${link.label}</a>`,
+          )
+          .join('');
+      }
+
+      menu.style.background = '#1c151a';
+      menu.style.border = '1px solid rgba(242, 226, 213, 0.25)';
+      menu.style.borderRadius = '12px';
+      menu.style.boxShadow = '0 12px 30px rgba(21,18,26,0.18)';
+
+      menu.querySelectorAll('a').forEach((link) => {
+        link.style.background = 'rgba(255, 255, 255, 0.04)';
+        link.style.border = '1px solid rgba(242, 226, 213, 0.18)';
+        link.style.color = '#f2e2d5';
+        link.style.boxShadow = 'none';
+
+        link.addEventListener('mouseenter', () => {
+          link.style.background = 'linear-gradient(180deg, rgba(168,25,42,0.92), rgba(107,15,29,0.94))';
+          link.style.borderColor = '#a8192a';
+          link.style.color = '#fff7f4';
+        });
+
+        link.addEventListener('mouseleave', () => {
+          link.style.background = 'rgba(255, 255, 255, 0.04)';
+          link.style.borderColor = 'rgba(242, 226, 213, 0.18)';
+          link.style.color = '#f2e2d5';
+        });
+
+        link.addEventListener('click', closeMenu);
+      });
+    };
+
     const positionMenu = () => {
-      // on very small screens, menu will be full-width and anchored to bottom via CSS
       if (window.innerWidth <= 420) {
-        menu.style.left = "12px";
-        menu.style.right = "12px";
-        menu.style.top = "auto";
-        menu.style.bottom = "16px";
-        menu.style.position = "fixed";
+        menu.style.left = '12px';
+        menu.style.right = '12px';
+        menu.style.top = 'auto';
+        menu.style.bottom = '16px';
+        menu.style.position = 'fixed';
         return;
       }
       const rect = toggle.getBoundingClientRect();
-      menu.style.position = "fixed";
+      menu.style.position = 'fixed';
       const top = rect.bottom + 8;
       let left = rect.right - 200;
       if (left + 220 > window.innerWidth) left = window.innerWidth - 220 - 8;
       if (left < 8) left = 8;
       menu.style.top = `${top}px`;
       menu.style.left = `${left}px`;
-      menu.style.bottom = "auto";
+      menu.style.bottom = 'auto';
     };
 
     const openMenu = () => {
+      syncMenuContent();
       positionMenu();
-      document.body.classList.add("hero-actions-open");
-      menu.classList.add("open");
-      menu.setAttribute("aria-hidden", "false");
-      toggle.setAttribute("aria-expanded", "true");
+      document.body.classList.add('hero-actions-open');
+      menu.classList.add('open');
+      menu.setAttribute('aria-hidden', 'false');
+      toggle.setAttribute('aria-expanded', 'true');
     };
     const closeMenu = () => {
-      document.body.classList.remove("hero-actions-open");
-      menu.classList.remove("open");
-      menu.setAttribute("aria-hidden", "true");
-      toggle.setAttribute("aria-expanded", "false");
+      document.body.classList.remove('hero-actions-open');
+      menu.classList.remove('open');
+      menu.setAttribute('aria-hidden', 'true');
+      toggle.setAttribute('aria-expanded', 'false');
     };
 
-    toggle.addEventListener("click", (e) => {
+    toggle.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (document.body.classList.contains("hero-actions-open")) closeMenu();
+      if (document.body.classList.contains('hero-actions-open')) closeMenu();
       else openMenu();
     });
 
-    // close when clicking a menu link
-    menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
-
-    // close on outside click or Escape
-    document.addEventListener("click", (e) => {
+    document.addEventListener('click', (e) => {
       if (!menu.contains(e.target) && !toggle.contains(e.target)) closeMenu();
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMenu();
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMenu();
     });
 
-    // reposition on resize/scroll
-    window.addEventListener("resize", () => {
+    window.addEventListener('resize', () => {
       if (window.innerWidth > 900) closeMenu();
-      if (document.body.classList.contains("hero-actions-open")) positionMenu();
+      if (document.body.classList.contains('hero-actions-open')) positionMenu();
     });
-    window.addEventListener("scroll", () => {
-      if (document.body.classList.contains("hero-actions-open")) positionMenu();
+    window.addEventListener('scroll', () => {
+      if (document.body.classList.contains('hero-actions-open')) positionMenu();
     }, { passive: true });
+
+    syncMenuContent();
   }
 })();
