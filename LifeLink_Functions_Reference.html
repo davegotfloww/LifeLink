@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeLink Function Reference</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      background: #f9f4f1;
+      color: #1e1e1e;
+      line-height: 1.6;
+    }
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+    h1, h2, h3 {
+      color: #671a28;
+      margin-top: 24px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 30px;
+      margin-bottom: 6px;
+    }
+    h2 {
+      font-size: 22px;
+      border-bottom: 2px solid #d7b9ba;
+      padding-bottom: 6px;
+    }
+    h3 {
+      font-size: 18px;
+      margin-top: 18px;
+    }
+    p, li {
+      font-size: 13px;
+    }
+    .meta {
+      font-size: 12px;
+      color: #4d4d4d;
+      margin-bottom: 24px;
+    }
+    .toc {
+      background: #fff;
+      border: 1px solid #e8d9d3;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0 30px;
+    }
+    ul {
+      margin-top: 8px;
+      margin-bottom: 8px;
+      padding-left: 22px;
+    }
+    .section {
+      background: #fff;
+      border: 1px solid #ead7d2;
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-top: 18px;
+    }
+    code {
+      font-size: 12px;
+      background: #f4efee;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .small {
+      font-size: 12px;
+    }
+    .note {
+      background: #f6ece8;
+      border-left: 4px solid #a8192a;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 12px;
+    }
+    .end {
+      text-align: center;
+      margin-top: 28px;
+      color: #6d202d;
+      font-weight: bold;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>LifeLink: Detailed Code Function Guide</h1>
+    <div class="meta">
+      Personal reference for the project codebase<br />
+      Created for: Prince David Dosunmu<br />
+      Project: LifeLink.web<br />
+      Files reviewed: <code>script.js</code>, <code>server.js</code>, <code>README.md</code>
+    </div>
+
+    <div class="toc">
+      <h3>Table of contents</h3>
+      <ul>
+        <li>Project overview</li>
+        <li>Frontend structure and lifecycle</li>
+        <li>Function-by-function explanation in <code>script.js</code></li>
+        <li>Backend logic in <code>server.js</code></li>
+        <li>How the app works together</li>
+        <li>Important developer notes</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>1. Project overview</h2>
+      <p>LifeLink is a web application designed to connect hospitals and blood donors. The front end is mainly built with HTML, CSS, and JavaScript, while the backend is a lightweight Node.js/Express server that stores data in <code>data.json</code>.</p>
+      <p>The project's core idea is simple:</p>
+      <ul>
+        <li>Hospitals can create blood requests.</li>
+        <li>Donors can sign up with blood type information.</li>
+        <li>The system stores users and requests locally and serves them through REST APIs.</li>
+        <li>The user interface updates based on session status and active page state.</li>
+      </ul>
+      <p>The front end is responsible for experience and interaction; the server is responsible for secure storage, authentication, and request management.</p>
+    </div>
+
+    <div class="section">
+      <h2>2. Frontend structure and lifecycle</h2>
+      <p>The project’s front-end behavior is mostly contained in <code>script.js</code>. It wraps all logic inside an IIFE (<code>(function(){ ... })();</code>) to keep variables local and prevent global pollution.</p>
+      <p>When the page loads, the script runs:</p>
+      <ol>
+        <li><code>injectStyles()</code> adds needed CSS to the document.</li>
+        <li><code>initNav()</code> creates the mobile menu and scroll behavior.</li>
+        <li><code>initActiveLinkTracking()</code> highlights the active navigation item when a section is in view.</li>
+        <li><code>initReveal()</code> adds scroll-triggered animations.</li>
+        <li><code>initStatCounters()</code> animates the numeric counters.</li>
+        <li><code>initUrgentTimestamps()</code> makes urgent request times feel live.</li>
+        <li><code>initFooterYear()</code> updates the copyright year automatically.</li>
+        <li><code>renderUserIsland()</code> and <code>initAuth()</code> control login and user session behavior.</li>
+        <li><code>initHeroAccess()</code> creates a mobile quick-access menu.</li>
+      </ol>
+      <p>The code uses the browser's <code>document</code>, <code>window</code>, and <code>localStorage</code> APIs heavily.</p>
+    </div>
+
+    <div class="section">
+      <h2>3. Function-by-function explanation in <code>script.js</code></h2>
+
+      <h3>3.1 <code>injectStyles()</code></h3>
+      <p>This function creates a <code>&lt;style&gt;</code> tag inside the page head and injects a custom CSS string. It is used to add behavior styles such as:</p>
+      <ul>
+        <li>smooth scroll offset</li>
+        <li>header shadow while scrolling</li>
+        <li>active nav link underline</li>
+        <li>mobile nav menu open state</li>
+        <li>reveal animations for sections</li>
+      </ul>
+      <p>It keeps the custom behavior isolated from the main HTML stylesheet so the original design stays clean and modular.</p>
+
+      <h3>3.2 <code>initNav()</code></h3>
+      <p>This function sets up the mobile navigation and the header state.</p>
+      <ul>
+        <li>It selects the toggle button and nav menu.</li>
+        <li>It sets <code>aria-expanded</code> and <code>aria-controls</code> for accessibility.</li>
+        <li><code>setOpen(open)</code> toggles the <code>.open</code> class on both the menu and the button.</li>
+        <li>Clicking the toggle opens or closes the menu.</li>
+        <li>All menu links close the menu when clicked.</li>
+        <li>Clicking outside the nav closes it.</li>
+        <li>Pressing <code>Escape</code> closes it.</li>
+        <li>It also adds a header shadow once the user has scrolled down.</li>
+      </ul>
+      <p>Purpose: makes navigation responsive and accessible on smaller screens.</p>
+
+      <h3>3.3 <code>initActiveLinkTracking()</code></h3>
+      <p>This function uses the <code>IntersectionObserver</code> API to track which section is currently visible in the viewport.</p>
+      <ul>
+        <li>It gathers all nav links whose href starts with <code>#</code>.</li>
+        <li>It maps a target section element to its corresponding link.</li>
+        <li>Whenever a section becomes visible, it removes the <code>active</code> class from all nav links and adds it to the new active one.</li>
+      </ul>
+      <p>Purpose: highlight the current page section while the user is scrolling.</p>
+
+      <h3>3.4 <code>initReveal()</code></h3>
+      <p>This function adds the “reveal on scroll” effect using IntersectionObserver.</p>
+      <ul>
+        <li>It selects elements such as section heads, steps, rows, and urgent items.</li>
+        <li>Each element gets the <code>.reveal</code> class and a staggered transition delay.</li>
+        <li>If the user has reduced motion enabled, all elements are immediately visible without animation.</li>
+        <li>When an element enters view, it gains <code>.is-visible</code> and the observer stops tracking it.</li>
+      </ul>
+      <p>Purpose: adds polished motion and makes the landing page feel more modern.</p>
+
+      <h3>3.5 <code>animateNum(el)</code></h3>
+      <p>This function animates number elements such as “1,000+ donors” or “24/7 support”.</p>
+      <ul>
+        <li>It reads the actual text inside the element.</li>
+        <li>It identifies whether the number contains a comma or decimal.</li>
+        <li>It converts the text into a numeric value and animates it from 0 to the target value.</li>
+        <li>It uses <code>requestAnimationFrame</code> for a smooth progression.</li>
+        <li>It re-applies the original formatting at the end.</li>
+      </ul>
+      <p>Purpose: gives the stats a lively, professional presentation.</p>
+
+      <h3>3.6 <code>initStatCounters()</code></h3>
+      <p>This function watches the stats container and when it enters the viewport, it runs all the number animations.</p>
+      <ul>
+        <li>It looks for the <code>.stats</code> section.</li>
+        <li>It creates an observer.</li>
+        <li>When the stats section is visible, it calls <code>animateNum()</code> for each <code>.num</code> element.</li>
+      </ul>
+      <p>Purpose: triggers animations only when the user sees the stats, which is a good performance pattern.</p>
+
+      <h3>3.7 <code>initUrgentTimestamps()</code></h3>
+      <p>This function makes urgent request items show messages like “requested 12 minutes ago” and updates them every minute.</p>
+      <ul>
+        <li>It finds all elements with class <code>.urgent-item .sub</code>.</li>
+        <li>It uses a regex to find text such as “requested 2 hours ago”.</li>
+        <li>It converts the value into minutes.</li>
+        <li>Every 60,000 milliseconds, it increases the minutes by 1 and updates the label.</li>
+      </ul>
+      <p>Purpose: creates a realistic live feeling without a real backend timer.</p>
+
+      <h3>3.8 <code>initFooterYear()</code></h3>
+      <p>This function updates the footer’s year automatically.</p>
+      <ul>
+        <li>It finds the footer text node containing a year.</li>
+        <li>It replaces the year with the current year from <code>new Date().getFullYear()</code>.</li>
+      </ul>
+      <p>Purpose: avoids rewriting the year manually every year.</p>
+
+      <h3>3.9 Local storage helpers</h3>
+      <p>The app uses localStorage for a demo authentication system. These helper functions are essential:</p>
+      <ul>
+        <li><code>getStoredUsers()</code>: reads the user list from localStorage, returning an empty array if the data is invalid.</li>
+        <li><code>saveStoredUsers(users)</code>: saves the array of users.</li>
+        <li><code>getStoredSession()</code>: loads the logged-in user.</li>
+        <li><code>setStoredSession(user)</code>: stores the active session.</li>
+        <li><code>clearStoredSession()</code>: clears the session when the user logs out.</li>
+      </ul>
+      <p>Because the project is a demo, localStorage is used instead of a real backend database. This is simple and easy to test, but it is not fully secure for production use.</p>
+
+      <h3>3.10 <code>isAuthPage()</code></h3>
+      <p>This checks whether the current page is the authentication page by reading the current page path and comparing it with <code>auth.html</code>.</p>
+      <p>If the user is already logged in and tries to open the auth page, they are redirected to the dashboard.</p>
+
+      <h3>3.11 <code>renderUserIsland()</code></h3>
+      <p>This is one of the most important UI functions. It controls the top navigation user state.</p>
+      <ul>
+        <li>It finds the header navigation and CTA area.</li>
+        <li>If no user island exists, it creates one.</li>
+        <li>It reads the current session from localStorage.</li>
+        <li>If there is no user, it shows the normal auth button and hides the user island.</li>
+        <li>If there is a user, it displays a small badge with their role and initials.</li>
+        <li>It changes the button text from “Join LifeLink” to “Open dashboard”.</li>
+        <li>It hides the auth links for logged-in users.</li>
+      </ul>
+      <p>Purpose: creates a dynamic session-aware navigation experience without needing a backend session system.</p>
+
+      <h3>3.12 <code>initAuth()</code></h3>
+      <p>This function initializes the entire authentication section on the auth page.</p>
+      <ul>
+        <li>If a user is already logged in, it sends them straight to <code>dashboard.html</code>.</li>
+        <li>It finds the auth app container and all tabs/panels.</li>
+        <li><code>showTab(target)</code> switches between login and signup views.</li>
+        <li><code>updateRoleFields()</code> shows or hides donor-specific or hospital-specific fields based on the selected role.</li>
+        <li><code>renderSession()</code> displays the current logged-in user inside the auth page.</li>
+        <li>It wires event listeners for the sign-up form and login form.</li>
+      </ul>
+      <p>The sign-up flow validates:</p>
+      <ul>
+        <li>name</li>
+        <li>email</li>
+        <li>password length</li>
+        <li>password confirmation</li>
+        <li>blood type for donors</li>
+        <li>hospital name for hospitals</li>
+      </ul>
+      <p>The login flow checks if the email and password match a saved user in localStorage, then stores the session and redirects to the dashboard.</p>
+
+      <h3>3.13 <code>initHeroAccess()</code></h3>
+      <p>This creates a floating menu for mobile hero actions. It is a small UI enhancement.</p>
+      <ul>
+        <li>It creates a hidden menu clone.</li>
+        <li><code>getNavMenuLinks()</code> collects all nav links except the auth page link.</li>
+        <li><code>syncMenuContent()</code> fills the menu with those links and adds styling.</li>
+        <li><code>positionMenu()</code> places the menu correctly on mobile or desktop.</li>
+        <li><code>openMenu()</code> and <code>closeMenu()</code> manage open/closed states.</li>
+        <li>It closes if the user clicks away or presses Escape.</li>
+      </ul>
+      <p>Purpose: improves the mobile experience by giving quick access to top actions, especially on smaller screens.</p>
+    </div>
+
+    <div class="section">
+      <h2>4. Backend logic in <code>server.js</code></h2>
+
+      <h3>4.1 Setup and dependencies</h3>
+      <p>The server uses:</p>
+      <ul>
+        <li><code>express</code> for API and static file hosting</li>
+        <li><code>body-parser</code> for reading JSON request bodies</li>
+        <li><code>fs</code> for file operations on <code>data.json</code></li>
+        <li><code>path</code> for path management</li>
+        <li><code>crypto</code> for hashing passwords securely</li>
+      </ul>
+      <p>The server itself runs on port 3000 by default, unless an environment variable sets another port.</p>
+
+      <h3>4.2 <code>readData()</code></h3>
+      <p>This function reads the JSON file and parses it into JavaScript objects. If the file is missing or invalid, it returns:</p>
+      <code>{ users: [], requests: [] }</code>
+      <p>Purpose: keeps the app resilient and prevents crashes on an empty or corrupt file.</p>
+
+      <h3>4.3 <code>writeData(data)</code></h3>
+      <p>This writes the full application data back to <code>data.json</code> with pretty formatting.</p>
+      <p>Purpose: persist user and request information so the app can maintain state between requests.</p>
+
+      <h3>4.4 <code>hashPassword(password, salt = null)</code></h3>
+      <p>This function creates a secure password hash using Node’s <code>crypto.scryptSync()</code>.</p>
+      <ul>
+        <li>If no salt is provided, it generates a random one.</li>
+        <li>It combines the password and salt using scrypt.</li>
+        <li>It returns both the salt and the generated hash.</li>
+      </ul>
+      <p>Purpose: keeps user password storage more secure than plain text storage.</p>
+
+      <h3>4.5 <code>GET /api/ping</code></h3>
+      <p>Simple health check endpoint. It returns a basic success message.</p>
+      <p>Purpose: confirms the backend is running.</p>
+
+      <h3>4.6 <code>POST /api/signup</code></h3>
+      <p>Creates a new donor or hospital account.</p>
+      <ul>
+        <li>It validates that the required fields are present.</li>
+        <li>It reads the data file.</li>
+        <li>It checks whether the email already exists.</li>
+        <li>If not, it creates a secure password hash.</li>
+        <li>It builds a user object containing role, location, blood type, etc.</li>
+        <li>It saves the user and returns a sanitized payload without password fields.</li>
+      </ul>
+      <p>Important detail: hospital accounts are marked as <code>verified: false</code>, while donor accounts are automatically marked as verified.</p>
+
+      <h3>4.7 <code>POST /api/login</code></h3>
+      <p>Authenticates a user by matching email and password.</p>
+      <ul>
+        <li>It finds the user by email.</li>
+        <li>It reconstructs the correct hash using the stored salt.</li>
+        <li>If the hash matches, login succeeds.</li>
+        <li>It returns the user object without password details.</li>
+      </ul>
+      <p>Purpose: verifies identity without exposing the actual stored password.</p>
+
+      <h3>4.8 <code>GET /api/requests</code></h3>
+      <p>Returns blood requests from the data file with filtering.</p>
+      <ul>
+        <li><code>?status=open</code> filters by status</li>
+        <li><code>?type=blood</code> filters by request type</li>
+        <li><code>?place=lagos</code> filters by place text</li>
+        <li><code>?hospitalId=...</code> shows requests from a specific hospital</li>
+      </ul>
+      <p>Purpose: helps dashboards and matching screens load only the relevant request data.</p>
+
+      <h3>4.9 <code>POST /api/requests</code></h3>
+      <p>Creates a new urgent request.</p>
+      <ul>
+        <li>It checks that a type and place are present.</li>
+        <li>It retrieves the hospital user by id.</li>
+        <li>It stores metadata such as hospital name, location, and contact.</li>
+        <li>It creates a request object with a unique id and timestamps.</li>
+        <li>It prepends the request to the data list and saves it.</li>
+      </ul>
+      <p>Important detail: the request is stored with status <code>open</code> by default.</p>
+
+      <h3>4.10 <code>PUT /api/requests/:id</code></h3>
+      <p>Updates an existing request.</p>
+      <ul>
+        <li>It reads the request id from the URL.</li>
+        <li>It validates the request exists.</li>
+        <li>It updates any field provided in the request body.</li>
+        <li>It enforces valid statuses: <code>open</code>, <code>fulfilled</code>, and <code>cancelled</code>.</li>
+        <li>It updates <code>updatedAt</code>.</li>
+      </ul>
+      <p>The API is flexible because it accepts partial updates without rewriting the whole record.</p>
+
+      <h3>4.11 <code>GET /api/admin/users</code></h3>
+      <p>Lists users only if the correct admin key is supplied.</p>
+      <ul>
+        <li>It reads <code>key</code> from the query string or <code>x-admin-key</code> header.</li>
+        <li>If the key does not match <code>ADMIN_KEY</code>, it rejects access with 401.</li>
+        <li>It returns sanitized user records without password data.</li>
+      </ul>
+      <p>Purpose: gives the project a thin administrative view without exposing sensitive fields.</p>
+
+      <h3>4.12 <code>POST /api/admin/verify-user</code></h3>
+      <p>Allows an admin to verify a hospital or donor account.</p>
+      <ul>
+        <li>It checks the admin key.</li>
+        <li>It requires a user id.</li>
+        <li>It finds the account and sets <code>verified</code> to true or false.</li>
+        <li>It saves the updated record.</li>
+      </ul>
+      <p>Purpose: supports a moderation or verification flow for healthcare-related accounts.</p>
+
+      <h3>4.13 Catch-all route</h3>
+      <p>The final route is a fallback:</p>
+      <code>app.use((req, res) => res.status(404).send("Not found"));</code>
+      <p>Purpose: returns a simple 404 when the user requests an invalid URL.</p>
+    </div>
+
+    <div class="section">
+      <h2>5. How the app works together</h2>
+      <p>The application generally works in this order:</p>
+      <ol>
+        <li>The user opens the site.</li>
+        <li>The browser loads the HTML and CSS.</li>
+        <li><code>script.js</code> initializes the interactive experience.</li>
+        <li>The user signs up or logs in.</li>
+        <li>The front end saves the current session using localStorage.</li>
+        <li>For real API-backed behavior, the Node server reads and writes JSON data.</li>
+        <li>Hospitals create urgent request objects.</li>
+        <li>Donors and admins can view or verify records based on role and permissions.</li>
+      </ol>
+      <p>In other words:</p>
+      <ul>
+        <li><code>script.js</code> is the interface layer.</li>
+        <li><code>server.js</code> is the storage and logic layer.</li>
+        <li><code>data.json</code> is the data layer.</li>
+      </ul>
+      <p>This arrangement is ideal for a small demo, but not for a production-grade healthcare application, because localStorage and a simple file-based JSON database are not enough for high security or large-scale concurrency.</p>
+    </div>
+
+    <div class="section">
+      <h2>6. Important developer notes</h2>
+      <ul>
+        <li>The JavaScript file is mostly UI-driven and browser-based.</li>
+        <li>The backend is intentionally lightweight and educational rather than enterprise-level.</li>
+        <li>Passwords are hashed, but the current project is still a demo.</li>
+        <li>There is no real database, real-time messaging, or live donor matching yet.</li>
+        <li>The design uses local storage for session persistence and quick prototyping.</li>
+      </ul>
+      <div class="note">
+        This project is a strong starting point for a real blood-donation platform, but it would need a real database, stronger security, proper role-based authorization, and more robust validation before production deployment.
+      </div>
+    </div>
+
+    <div class="end">LifeLink Function Reference — End of Guide</div>
+  </div>
+</body>
+</html>
