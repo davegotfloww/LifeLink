@@ -34,7 +34,11 @@
         </a>
         <div class="nav-cta">
           <a id="dashboard-signout-btn" href="auth.html" class="btn btn-line">Log out</a>
-          <a href="index.html" class="btn btn-solid">Back to home</a>
+          <a href="index.html" class="icon-only" aria-label="Back to home">
+            <svg class="icon-house" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 3l9 7h-3v7a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-7H3l9-7z" />
+            </svg>
+          </a>
         </div>
       </nav>
     </header>
@@ -83,6 +87,54 @@
     </main>
 
     <script src="script.js"></script>
+    <!-- Profile editor modal (used to edit account without logging out) -->
+    <div id="profile-modal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close="true"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+        <header style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 id="profile-modal-title">Edit profile</h3>
+          <button class="btn btn-line" data-close="true">Close</button>
+        </header>
+        <form id="profile-edit-form" class="modal-form">
+          <div class="form-row">
+            <label>Name <input name="name" type="text" required /></label>
+          </div>
+          <div class="form-row">
+            <label>Email <input name="email" type="email" disabled /></label>
+          </div>
+          <div class="form-row">
+            <label>Role
+              <select name="role">
+                <option value="donor">Donor</option>
+                <option value="hospital">Hospital</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row" id="donor-fields-modal">
+            <label>Blood type <input name="bloodType" type="text" placeholder="A+ / O-" /></label>
+          </div>
+          <div class="form-row" id="hospital-fields-modal" style="display:none;">
+            <label>Hospital name <input name="hospitalName" type="text" /></label>
+          </div>
+          <div class="form-row">
+            <label>Location <input name="location" type="text" required /></label>
+          </div>
+          <div class="form-row">
+            <label style="font-size:13px;color:var(--muted);">Support level
+              <select name="supportLevel">
+                <option value="ready">Ready to help</option>
+                <option value="limited">Limited availability</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+            </label>
+          </div>
+          <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+            <button type="button" class="btn btn-line" data-close="true">Cancel</button>
+            <button type="submit" class="btn btn-solid">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <script>
       (function () {
         function getStoredSession() {
@@ -143,6 +195,7 @@
               </div>
               <div class="dashboard-actions-row">
                 <a href="hospital-dashboard.html" class="btn btn-solid">Manage requests</a>
+                <button id="edit-profile-btn" class="btn btn-line">Edit profile</button>
                 <a href="urgent-needs-landing.html" class="btn btn-line">Browse urgent needs</a>
               </div>
             `;
@@ -159,11 +212,11 @@
                 </div>
                 <div class="dashboard-stat-card">
                   <span class="dashboard-label">Support level</span>
-                  <strong>Ready to help</strong>
+                  <strong id="dash-support-level">${sess.supportLevel === 'limited' ? 'Limited availability' : sess.supportLevel === 'unavailable' ? 'Unavailable' : 'Ready to help'}</strong>
                 </div>
               </div>
               <div class="dashboard-actions-row">
-                <a href="becomeadonor.html" class="btn btn-solid">Update profile</a>
+                <button id="edit-profile-btn" class="btn btn-solid">Update profile</button>
                 <a href="urgent-needs-landing.html" class="btn btn-line">View nearby needs</a>
               </div>
             `;
@@ -171,6 +224,26 @@
         }
 
         document.addEventListener("DOMContentLoaded", showDashboard);
+        // refresh when profile updated in another tab/modal and animate the updated area
+        window.addEventListener('lifelink:profile-updated', function (e) {
+          showDashboard();
+          // animate support level
+          setTimeout(() => {
+            const el = document.getElementById('dash-support-level');
+            if (el) {
+              el.classList.add('update-flash');
+              // trigger animate class in next frame
+              requestAnimationFrame(() => el.classList.add('animate'));
+              setTimeout(() => el.classList.remove('animate'), 700);
+              setTimeout(() => el.classList.remove('update-flash'), 900);
+            }
+            const initials = document.getElementById('user-island-initials');
+            if (initials) {
+              initials.classList.add('pulse-update');
+              setTimeout(() => initials.classList.remove('pulse-update'), 1000);
+            }
+          }, 60);
+        });
       })();
     </script>
   </body>

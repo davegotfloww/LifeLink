@@ -366,7 +366,7 @@
     island.innerHTML = `
       <a href="dashboard.html" class="user-island-link">
         <span class="user-island-badge">${roleLabel}</span>
-        <span class="user-island-initials">${initials || "U"}</span>
+        <span id="user-island-initials" class="user-island-initials">${initials || "U"}</span>
       </a>
     `;
 
@@ -636,6 +636,129 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* 9. Profile editor (modal) — open, populate, save to localStorage    */
+  /* ------------------------------------------------------------------ */
+  function initProfileEditor() {
+    const modal = document.getElementById('profile-modal');
+    const form = document.getElementById('profile-edit-form');
+    if (!modal || !form) return;
+
+    const backdropSelector = '[data-close]';
+
+    function setModalOpen(open) {
+      modal.setAttribute('aria-hidden', String(!open));
+    }
+
+    function populateForm() {
+      const sess = getStoredSession();
+      if (!sess) return;
+      form.name.value = sess.name || '';
+      form.email.value = sess.email || '';
+      form.role.value = sess.role || 'donor';
+      form.location.value = sess.location || '';
+      form.bloodType.value = sess.bloodType || '';
+      form.hospitalName.value = sess.hospitalName || '';
+      toggleRoleFields(form.role.value);
+      // support level
+      const supportSel = form.querySelector('select[name="supportLevel"]');
+      if (supportSel) supportSel.value = sess.supportLevel || 'ready';
+    }
+
+    function toggleRoleFields(role) {
+      const donorFields = document.getElementById('donor-fields-modal');
+      const hospitalFields = document.getElementById('hospital-fields-modal');
+      if (donorFields) donorFields.style.display = role === 'donor' ? '' : 'none';
+      if (hospitalFields) hospitalFields.style.display = role === 'hospital' ? '' : 'none';
+    }
+
+    // open modal when any edit button is clicked
+    document.addEventListener('click', (e) => {
+      if (e.target && (e.target.id === 'edit-profile-btn' || e.target.closest && e.target.closest('#edit-profile-btn'))) {
+        populateForm();
+        setModalOpen(true);
+      }
+    });
+
+    // close handlers
+    modal.addEventListener('click', (e) => {
+      if (e.target && e.target.matches(backdropSelector)) setModalOpen(false);
+    });
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setModalOpen(false); });
+
+    form.role.addEventListener('change', (e) => toggleRoleFields(e.target.value));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const name = String(fd.get('name') || '').trim();
+      const role = String(fd.get('role') || 'donor');
+      const location = String(fd.get('location') || '').trim();
+      const bloodType = String(fd.get('bloodType') || '').trim();
+      const hospitalName = String(fd.get('hospitalName') || '').trim();
+      const email = String(fd.get('email') || '').trim().toLowerCase();
+
+      if (!name || !location) return alert('Please complete required fields.');
+
+      // update stored users list and session
+      const users = getStoredUsers();
+      const idx = users.findIndex(u => (u.email || '').toLowerCase() === email || u.id === (getStoredSession() && getStoredSession().id));
+      // collect availability
+      const supportLevel = (form.querySelector('select[name="supportLevel"]') || { value: 'ready' }).value;
+
+      const updated = Object.assign({}, getStoredSession() || {}, {
+        name, role, location,
+        bloodType: role === 'donor' ? bloodType : '',
+        hospitalName: role === 'hospital' ? hospitalName : '',
+        supportLevel,
+      });
+
+      if (idx >= 0) {
+        users[idx] = Object.assign({}, users[idx], updated);
+      } else {
+        users.push(Object.assign({ id: `${Date.now()}`, email }, updated));
+      }
+
+      saveStoredUsers(users);
+      setStoredSession(updated);
+      renderUserIsland();
+      // notify any open dashboards to refresh their view
+      try {
+        window.dispatchEvent(new CustomEvent('lifelink:profile-updated', { detail: updated }));
+      } catch (e) {
+        // fallback: nothing
+      }
+      setModalOpen(false);
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* small scroll nav for update.html                                    */
+  /* ------------------------------------------------------------------ */
+  function initUpdateScrollNav() {
+    const navLinks = document.querySelectorAll('#update-scroll-nav .scroll-nav-link');
+    if (!navLinks.length) return;
+    navLinks.forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = a.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+
+    const sections = Array.from(document.querySelectorAll('#section-personal, #section-role, #section-profile')).map(l => l.closest('label') || l);
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(n => n.classList.toggle('active', n.getAttribute('href').slice(1) === entry.target.id));
+        }
+      });
+    }, { threshold: 0.45 });
+    sections.forEach(s => { if (s) obs.observe(s); });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     injectStyles();
     initNav();
@@ -647,6 +770,38 @@
     renderUserIsland();
     initAuth();
     initHeroAccess();
+    initProfileEditor();
+    initUpdateScrollNav();
+    // show toast from sessionStorage (after redirect)
+    const pendingToast = sessionStorage.getItem('lifelink:toast');
+    if (pendingToast) {
+      showToast(pendingToast);
+      sessionStorage.removeItem('lifelink:toast');
+    }
+  });
+
+  /* lightweight toast used across pages */
+  function showToast(message) {
+    if (!message) return;
+    let node = document.querySelector('.lifelink-toast');
+    if (!node) {
+      node = document.createElement('div');
+      node.className = 'lifelink-toast';
+      document.body.appendChild(node);
+    }
+    node.textContent = message;
+    // show
+    requestAnimationFrame(() => node.classList.add('show'));
+    // hide after 3s
+    clearTimeout(node._hideTimer);
+    node._hideTimer = setTimeout(() => {
+      node.classList.remove('show');
+    }, 3000);
+  }
+
+  // show toast when profile updated event dispatched
+  window.addEventListener('lifelink:profile-updated', (e) => {
+    showToast('Profile updated successfully');
   });
 
   /* ------------------------------------------------------------------ */

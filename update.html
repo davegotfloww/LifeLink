@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LifeLink — Update Profile</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="/" class="logo">LifeLink</a>
+        <div class="nav-cta">
+          <a href="dashboard.html" class="btn btn-line">Back to dashboard</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-shell">
+        <div class="wrap" style="display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start;">
+          <nav id="update-scroll-nav" style="position:sticky;top:120px;align-self:start;">
+            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">
+              <li><a href="#section-personal" class="scroll-nav-link">Personal</a></li>
+              <li><a href="#section-role" class="scroll-nav-link">Role</a></li>
+              <li><a href="#section-profile" class="scroll-nav-link">Profile</a></li>
+            </ul>
+          </nav>
+          <div>
+            <div class="page-card" style="max-width:720px;margin:0 auto;">
+              <span class="page-badge">Edit profile</span>
+              <h2>Update your account</h2>
+              <p class="page-intro">Change your details and save — you won't be signed out.</p>
+
+              <form id="profile-edit-form-full" class="modal-form" style="margin-top:18px;">
+              <div class="form-row">
+                <label id="section-personal">Name <input name="name" type="text" required /></label>
+              </div>
+              <div class="form-row">
+                <label>Email <input name="email" type="email" disabled /></label>
+              </div>
+              <div class="form-row">
+                <label id="section-role">Role
+                  <select name="role">
+                    <option value="donor">Donor</option>
+                    <option value="hospital">Hospital</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-row" id="donor-fields-full">
+                <label>Blood type <input name="bloodType" type="text" placeholder="A+ / O-" /></label>
+              </div>
+              <div class="form-row" id="hospital-fields-full" style="display:none;">
+                <label>Hospital name <input name="hospitalName" type="text" /></label>
+              </div>
+              <div class="form-row">
+                <label id="section-profile">Location <input name="location" type="text" required /></label>
+              </div>
+              <div class="form-row">
+                <label style="font-size:13px;color:var(--muted);">Support level
+                  <select name="supportLevel">
+                    <option value="ready">Ready to help</option>
+                    <option value="limited">Limited availability</option>
+                    <option value="unavailable">Unavailable</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+                <a href="dashboard.html" class="btn btn-line">Cancel</a>
+                <button type="submit" class="btn btn-solid">Save changes</button>
+              </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+      (function () {
+        function getStoredSession() {
+          try { return JSON.parse(localStorage.getItem('lifelinkCurrentUser')); } catch (e) { return null; }
+        }
+
+        function getStoredUsers() {
+          try { return JSON.parse(localStorage.getItem('lifelinkUsers')) || []; } catch (e) { return []; }
+        }
+
+        function saveStoredUsers(users) { localStorage.setItem('lifelinkUsers', JSON.stringify(users)); }
+        function setStoredSession(u) { localStorage.setItem('lifelinkCurrentUser', JSON.stringify(u)); }
+
+        const form = document.getElementById('profile-edit-form-full');
+        if (!form) return;
+
+        function toggleFullFields(role) {
+          document.getElementById('donor-fields-full').style.display = role === 'donor' ? '' : 'none';
+          document.getElementById('hospital-fields-full').style.display = role === 'hospital' ? '' : 'none';
+        }
+
+        const sess = getStoredSession();
+        if (sess) {
+          form.name.value = sess.name || '';
+          form.email.value = sess.email || '';
+          form.role.value = sess.role || 'donor';
+          form.location.value = sess.location || '';
+          form.bloodType.value = sess.bloodType || '';
+          form.hospitalName.value = sess.hospitalName || '';
+          toggleFullFields(form.role.value);
+          // support level
+          const supportSel = form.querySelector('select[name="supportLevel"]');
+          if (supportSel) supportSel.value = sess.supportLevel || 'ready';
+        }
+
+        form.role.addEventListener('change', (e) => toggleFullFields(e.target.value));
+
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const name = String(fd.get('name') || '').trim();
+          const role = String(fd.get('role') || 'donor');
+          const location = String(fd.get('location') || '').trim();
+          const bloodType = String(fd.get('bloodType') || '').trim();
+          const hospitalName = String(fd.get('hospitalName') || '').trim();
+          const email = String(fd.get('email') || '').trim().toLowerCase();
+
+          if (!name || !location) return alert('Please complete required fields.');
+
+          const users = getStoredUsers();
+          const idx = users.findIndex(u => (u.email || '').toLowerCase() === email || u.id === (sess && sess.id));
+          const supportLevel = (form.querySelector('select[name="supportLevel"]') || { value: 'ready' }).value;
+          const updated = Object.assign({}, sess || {}, {
+            name, role, location,
+            bloodType: role === 'donor' ? bloodType : '',
+            hospitalName: role === 'hospital' ? hospitalName : '',
+            supportLevel,
+          });
+
+          if (idx >= 0) users[idx] = Object.assign({}, users[idx], updated);
+          else users.push(Object.assign({ id: `${Date.now()}`, email }, updated));
+
+          saveStoredUsers(users);
+          setStoredSession(updated);
+          try { sessionStorage.setItem('lifelink:toast', 'Profile updated successfully'); } catch (e) {}
+          window.location.href = 'dashboard.html';
+        });
+      })();
+    </script>
+  </body>
+</html>
