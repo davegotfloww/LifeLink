@@ -671,6 +671,7 @@ section {
 .dashboard-side-card {
   min-height: 100%;
 }
+.js-bloodtype{text-transform: uppercase;}
 .dashboard-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
