@@ -372,12 +372,6 @@
 
     if (authNavLink) authNavLink.parentElement.hidden = true;
     if (authCta) authCta.hidden = true;
-
-    const joinButton = ctaGroup.querySelector('.btn-solid[href="auth.html"]');
-    if (joinButton) {
-      joinButton.textContent = "Open dashboard";
-      joinButton.setAttribute("href", "dashboard.html");
-    }
   }
 
   function initAuth() {
