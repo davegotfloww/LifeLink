@@ -332,6 +332,24 @@ nav.wrap { position: relative; }
   box-shadow: 0 0 0 1px rgba(168, 25, 42, 0.24) inset;
 }
 
+/* Replace per-page textual home links with a single header house icon.
+   Hide existing page-level `home-btn` anchors (we inject `.nav-home`). */
+.home-btn { display: none !important; }
+
+/* header home icon positioned top-right on non-home pages */
+.nav-home {
+  display: inline-flex;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 55;
+}
+body.homepage .nav-home { display: none; }
+
+/* utility: fully remove become-a-donor links when user signed in */
+.removed-when-signed { display: none !important; }
+
 /* show/hide via body class for more reliable toggling */
 body.hero-actions-open .hero-action-menu { display: block !important; }
 /* keep hidden by default when JS not toggled */

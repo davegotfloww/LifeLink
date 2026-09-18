@@ -351,6 +351,18 @@
         joinButton.textContent = "Join LifeLink";
         joinButton.setAttribute("href", "auth.html");
       }
+      // ensure Become a donor links are visible when not signed in
+      document.querySelectorAll('a[href="becomeadonor.html"]').forEach((n) => {
+        n.hidden = false;
+        n.classList.remove('removed-when-signed');
+      });
+      // restore Request CTAs to original state when not signed in
+      document.querySelectorAll('a').forEach((a) => {
+        if (!a.dataset.origText) return;
+        a.textContent = a.dataset.origText || a.textContent;
+        if (a.dataset.origHref) a.setAttribute('href', a.dataset.origHref);
+        a.className = a.dataset.origClass || a.className;
+      });
       return;
     }
 
@@ -372,6 +384,31 @@
 
     if (authNavLink) authNavLink.parentElement.hidden = true;
     if (authCta) authCta.hidden = true;
+
+    
+
+    // hide all 'Become a donor' links when a user is signed in
+    document.querySelectorAll('a[href="becomeadonor.html"]').forEach((n) => {
+      n.hidden = true;
+      n.classList.add('removed-when-signed');
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 8. Inject a single header home icon (top-right) for non-home pages   */
+  /* ------------------------------------------------------------------ */
+  function initHeaderHomeIcon() {
+    const headerNav = document.querySelector('header nav.wrap');
+    if (!headerNav) return;
+    if (headerNav.querySelector('.nav-home')) return; // already present
+
+    const a = document.createElement('a');
+    a.href = '/';
+    a.className = 'nav-home icon-only';
+    a.setAttribute('aria-label', 'Home');
+    a.innerHTML = `<svg class="icon-house" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 3l9 7h-3v7a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-7H3l9-7z"/></svg>`;
+
+    headerNav.appendChild(a);
   }
 
   function initAuth() {
@@ -756,11 +793,25 @@
   document.addEventListener("DOMContentLoaded", () => {
     injectStyles();
     initNav();
+    initHeaderHomeIcon();
     initActiveLinkTracking();
     initReveal();
     initStatCounters();
     initUrgentTimestamps();
     initFooterYear();
+    // remember original Request CTA text/href/class so we can restore when needed
+    document.querySelectorAll('a').forEach((a) => {
+      const txt = (a.textContent || '').trim();
+      if (
+        txt.toLowerCase().includes('request blood') ||
+        a.id === 'footer-request-blood-link' ||
+        (a.getAttribute('href') || '').toLowerCase().includes('urgent')
+      ) {
+        if (!a.dataset.origHref) a.dataset.origHref = a.getAttribute('href') || '';
+        if (!a.dataset.origText) a.dataset.origText = txt;
+        if (!a.dataset.origClass) a.dataset.origClass = a.className || '';
+      }
+    });
     renderUserIsland();
     initAuth();
     initHeroAccess();
