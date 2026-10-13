@@ -16,39 +16,45 @@
         </div>
       </nav>
     </header>
-    <main class="page-shell">
+    <main class="admin-shell">
       <div class="wrap">
-        <div class="section-head">
-          <div class="eyebrow">Admin</div>
-          <h2>Manage accounts</h2>
-          <p>Enter the admin key to list users and verify hospital accounts.</p>
+        <div class="admin-hero">
+          <div class="admin-hero-copy">
+            <div class="page-badge">Admin</div>
+            <h1>Manage accounts</h1>
+            <p>Enter the admin key to list users and verify hospital accounts.</p>
+          </div>
+
+          <div class="admin-hero-panel">
+            <div class="admin-field">
+              <label for="admin-key">Admin key</label>
+              <div class="admin-input-row">
+                <input id="admin-key" type="password" placeholder="admin key" />
+                <button id="fetch-users" class="btn btn-solid">List users</button>
+              </div>
+              <div id="admin-msg" class="admin-message" aria-live="polite"></div>
+            </div>
+          </div>
         </div>
 
-        <div class="page-grid">
-          <div class="page-card">
-            <label
-              ><span>Admin key</span
-              ><input id="admin-key" type="password" placeholder="admin key"
-            /></label>
-            <div style="margin-top: 12px; display: flex; gap: 12px">
-              <button id="fetch-users" class="btn btn-solid">List users</button>
-              <div
-                id="admin-msg"
-                style="font-weight: 600; align-self: center"
-              ></div>
+        <div class="admin-grid">
+          <div class="admin-panel">
+            <div class="panel-header">
+              <h3>Registered users</h3>
+              <span class="mini-chip">secure</span>
             </div>
-
-            <div id="users-list" style="margin-top: 18px"></div>
+            <div id="users-list" class="user-list"></div>
           </div>
 
-          <div class="page-card page-highlight">
-            <h3>Notes</h3>
-            <p>
-              This interface is a simple demo. It sends the admin key over HTTPS
-              when used in production. The default local admin key is
-              <strong>dev-admin-key</strong> unless LIFELINK_ADMIN_KEY is set.
-            </p>
-          </div>
+          <aside class="admin-panel">
+            <div class="panel-header">
+              <h3>Notes</h3>
+            </div>
+            <div class="admin-note-content">
+              This interface is a simple demo. It sends the admin key over HTTPS when used in production.
+              The default local admin key is <strong>dev-admin-key</strong> unless <strong>LIFELINK_ADMIN_KEY</strong> is set.
+            </div>
+          </aside>
         </div>
       </div>
     </main>
@@ -65,38 +71,57 @@
         localStorage.setItem("lifelinkUsers", JSON.stringify(users));
       }
 
+      function setMessage(message, type) {
+        const msg = document.getElementById("admin-msg");
+        msg.textContent = message;
+        msg.className = "admin-message";
+        if (type) msg.classList.add(type);
+      }
+
       document
         .getElementById("fetch-users")
         .addEventListener("click", async function () {
           const key = document.getElementById("admin-key").value.trim();
           const msg = document.getElementById("admin-msg");
           msg.textContent = "";
+          msg.className = "admin-message";
 
           if (key !== "dev-admin-key") {
-            msg.textContent = "Unauthorized";
+            setMessage("Unauthorized", "error");
             return;
           }
 
           const data = getStoredUsers();
           const list = document.getElementById("users-list");
           list.innerHTML = "";
+
+          if (!data.length) {
+            list.innerHTML = '<div class="user-row"><div class="user-main"><div class="user-name"><strong>No users found</strong></div><div class="user-meta">No registered users in local storage yet.</div></div></div>';
+            setMessage("Users loaded", "success");
+            return;
+          }
+
           data.forEach((u) => {
             const row = document.createElement("div");
-            row.style.padding = "12px 0";
-            row.style.borderBottom = "1px solid rgba(0,0,0,0.06)";
+            row.className = "user-row";
             row.innerHTML = `
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div>
-                  <div style="font-weight:700">${u.name} ${u.role === "hospital" && !u.verified ? '<span style=\"color:#a8192a;font-weight:700;margin-left:8px\">(unverified)</span>' : ""}</div>
-                  <div style="font-size:13px;color:#666">${u.email} · ${u.role} · ${u.location || ""}</div>
+              <div class="user-main">
+                <div class="user-name">
+                  <strong>${u.name}</strong>
+                  <span class="role-badge ${u.role === "hospital" ? "hospital" : "donor"}">${u.role}</span>
+                  ${u.role === "hospital" && !u.verified ? '<span class="status-badge pending">pending</span>' : ""}
+                  ${u.role === "hospital" && u.verified ? '<span class="status-badge verified">verified</span>' : ""}
                 </div>
-                <div>
-                  ${u.role === "hospital" ? `<button class="btn btn-line" data-user="${u.id}">${u.verified ? "Revoke verification" : "Verify hospital"}</button>` : ""}
-                </div>
+                <div class="user-meta">${u.email} · ${u.location || "Location unavailable"}</div>
+              </div>
+              <div class="admin-actions">
+                ${u.role === "hospital" ? `<button class="btn btn-line" data-user="${u.id}">${u.verified ? "Revoke verification" : "Verify hospital"}</button>` : ""}
               </div>
             `;
             list.appendChild(row);
           });
+
+          setMessage("Users loaded", "success");
 
           list.querySelectorAll("button[data-user]").forEach((btn) => {
             btn.addEventListener("click", async () => {
@@ -107,8 +132,20 @@
               if (user) {
                 user.verified = verify;
                 saveStoredUsers(users);
-                msg.textContent = "Updated";
+                setMessage("Updated", "success");
                 btn.textContent = user.verified ? "Revoke verification" : "Verify hospital";
+                const row = btn.closest(".user-row");
+                const status = row.querySelector(".status-badge");
+                if (status) {
+                  status.textContent = user.verified ? "verified" : "pending";
+                  status.classList.toggle("verified", user.verified);
+                  status.classList.toggle("pending", !user.verified);
+                } else if (user.verified) {
+                  const badge = document.createElement("span");
+                  badge.className = "status-badge verified";
+                  badge.textContent = "verified";
+                  row.querySelector(".user-name").appendChild(badge);
+                }
               }
             });
           });
