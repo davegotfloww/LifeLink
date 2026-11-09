@@ -411,6 +411,56 @@
     headerNav.appendChild(a);
   }
 
+  function applyTheme(theme) {
+    const selected = theme === 'dark' ? 'dark' : 'light';
+    document.body.setAttribute('data-theme', selected);
+    document.documentElement.setAttribute('data-theme', selected);
+
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (toggle) {
+      const isDark = selected === 'dark';
+      toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+      toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+      const label = toggle.querySelector('.theme-toggle-label');
+      if (label) label.textContent = isDark ? 'Dark' : 'Light';
+      const icon = toggle.querySelector('.theme-toggle-icon');
+      if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    localStorage.setItem('lifelinkTheme', selected);
+  }
+
+  function initThemeToggle() {
+    const headerNav = document.querySelector('header nav.wrap');
+    if (!headerNav) return;
+
+    let toggle = headerNav.querySelector('[data-theme-toggle]');
+    if (!toggle) {
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'btn btn-line nav-theme-toggle';
+      toggle.dataset.themeToggle = 'true';
+      toggle.setAttribute('aria-label', 'Toggle theme');
+      toggle.innerHTML = '<span class="theme-toggle-icon" aria-hidden="true">☀️</span><span class="theme-toggle-label">Light</span>';
+
+      const ctaGroup = headerNav.querySelector('.nav-cta');
+      if (ctaGroup) {
+        ctaGroup.insertBefore(toggle, ctaGroup.firstChild);
+      } else {
+        headerNav.appendChild(toggle);
+      }
+    }
+
+    const savedTheme = localStorage.getItem('lifelinkTheme');
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    applyTheme(savedTheme || systemTheme);
+
+    toggle.addEventListener('click', () => {
+      const nextTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
+
   async function apiRequest(url, options = {}) {
     const response = await fetch(url, {
       headers: { "Content-Type": "application/json" },
@@ -862,6 +912,7 @@
     injectStyles();
     initNav();
     initHeaderHomeIcon();
+    initThemeToggle();
     initActiveLinkTracking();
     initReveal();
     initStatCounters();
