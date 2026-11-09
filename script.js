@@ -411,24 +411,71 @@
     headerNav.appendChild(a);
   }
 
+  function createThemeToggleButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-line nav-theme-toggle';
+    button.dataset.themeToggle = 'true';
+    button.setAttribute('aria-label', 'Toggle theme');
+    button.innerHTML = '<span class="theme-toggle-icon" aria-hidden="true">☼</span><span class="theme-toggle-label">Light</span>';
+    return button;
+  }
+
   function applyTheme(theme) {
     const selected = theme === 'dark' ? 'dark' : 'light';
+    const isDark = selected === 'dark';
     document.body.setAttribute('data-theme', selected);
     document.documentElement.setAttribute('data-theme', selected);
 
-    const toggle = document.querySelector('[data-theme-toggle]');
-    if (toggle) {
-      const isDark = selected === 'dark';
+    document.querySelectorAll('.step, .link-section, .pair, .pair-side, .pair-meta, .section-head h2, .section-head p, .step h3, .step p, .step .index, .pair-side .who, .pair-side p.quote').forEach((el) => {
+      if (el.matches('.step')) {
+        el.style.background = isDark
+          ? 'linear-gradient(180deg, rgba(18, 25, 32, 0.96), rgba(24, 32, 40, 0.98))'
+          : '';
+        el.style.borderColor = isDark ? 'rgba(237, 243, 247, 0.14)' : '';
+        el.style.boxShadow = isDark ? '0 18px 36px rgba(2, 6, 10, 0.26)' : '';
+      }
+      if (el.matches('.link-section')) {
+        el.style.background = isDark ? 'rgba(10, 15, 20, 0.88)' : '';
+      }
+      if (el.matches('.pair')) {
+        el.style.borderBottomColor = isDark ? 'rgba(237, 243, 247, 0.12)' : '';
+      }
+      if (el.matches('.pair-side .who')) {
+        el.style.color = isDark ? 'rgba(210, 222, 233, 0.74)' : '';
+      }
+      if (el.matches('.pair-side p.quote, .step h3, .step .index, .section-head h2')) {
+        el.style.color = isDark ? '#edf3f7' : '';
+      }
+      if (el.matches('.step p, .pair-side p.quote, .pair-meta')) {
+        el.style.color = isDark ? 'rgba(210, 222, 233, 0.74)' : '';
+      }
+      if (el.matches('.section-head p')) {
+        el.style.color = isDark ? 'rgba(210, 222, 233, 0.74)' : '';
+      }
+    });
+
+    const toggles = document.querySelectorAll('[data-theme-toggle]');
+    toggles.forEach((toggle) => {
       toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
       toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
       const label = toggle.querySelector('.theme-toggle-label');
       if (label) label.textContent = isDark ? 'Dark' : 'Light';
       const icon = toggle.querySelector('.theme-toggle-icon');
-      if (icon) icon.textContent = isDark ? '☀️' : '🌙';
-    }
+      if (icon) icon.textContent = isDark ? '☾' : '☼';
+    });
 
     localStorage.setItem('lifelinkTheme', selected);
   }
+
+  document.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-theme-toggle]');
+    if (!toggle) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const nextTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  });
 
   function initThemeToggle() {
     const headerNav = document.querySelector('header nav.wrap');
@@ -436,12 +483,7 @@
 
     let toggle = headerNav.querySelector('[data-theme-toggle]');
     if (!toggle) {
-      toggle = document.createElement('button');
-      toggle.type = 'button';
-      toggle.className = 'btn btn-line nav-theme-toggle';
-      toggle.dataset.themeToggle = 'true';
-      toggle.setAttribute('aria-label', 'Toggle theme');
-      toggle.innerHTML = '<span class="theme-toggle-icon" aria-hidden="true">☀️</span><span class="theme-toggle-label">Light</span>';
+      toggle = createThemeToggleButton();
 
       const ctaGroup = headerNav.querySelector('.nav-cta');
       if (ctaGroup) {
@@ -454,11 +496,6 @@
     const savedTheme = localStorage.getItem('lifelinkTheme');
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     applyTheme(savedTheme || systemTheme);
-
-    toggle.addEventListener('click', () => {
-      const nextTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      applyTheme(nextTheme);
-    });
   }
 
   async function apiRequest(url, options = {}) {
@@ -1000,26 +1037,33 @@
 
     const syncMenuContent = () => {
       const links = getNavMenuLinks();
-      if (!links.length) {
-        menu.innerHTML = '<a href="index.html" class="btn btn-line on-ink">Home</a>';
-      } else {
-        menu.innerHTML = links
-          .map(
+      const menuLinks = links.length
+        ? links.map(
             (link) => `<a href="${link.href}" class="btn btn-line on-ink">${link.label}</a>`,
-          )
-          .join('');
+          ).join('')
+        : '<a href="index.html" class="btn btn-line on-ink">Home</a>';
+
+      let themeToggle = menu.querySelector('[data-theme-toggle]');
+      if (!themeToggle) {
+        themeToggle = createThemeToggleButton();
+        themeToggle.classList.add('hero-menu-theme-toggle');
       }
 
-      menu.style.background = '#1c151a';
-      menu.style.border = '1px solid rgba(242, 226, 213, 0.25)';
-      menu.style.borderRadius = '12px';
-      menu.style.boxShadow = '0 12px 30px rgba(21,18,26,0.18)';
+      menu.innerHTML = `${themeToggle.outerHTML}${menuLinks}`;
+
+      applyTheme(document.body.getAttribute('data-theme') || localStorage.getItem('lifelinkTheme') || 'light');
+
+      menu.style.background = 'rgba(17, 22, 29, 0.9)';
+      menu.style.border = '1px solid rgba(255, 255, 255, 0.12)';
+      menu.style.borderRadius = '16px';
+      menu.style.boxShadow = '0 18px 40px rgba(21,18,26,0.18)';
 
       menu.querySelectorAll('a').forEach((link) => {
         link.style.background = 'rgba(255, 255, 255, 0.04)';
         link.style.border = '1px solid rgba(242, 226, 213, 0.18)';
         link.style.color = '#f2e2d5';
         link.style.boxShadow = 'none';
+        link.style.borderRadius = '12px';
 
         link.addEventListener('mouseenter', () => {
           link.style.background = 'linear-gradient(180deg, rgba(168,25,42,0.92), rgba(107,15,29,0.94))';
