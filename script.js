@@ -411,6 +411,33 @@
     headerNav.appendChild(a);
   }
 
+  async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+
+    const text = await response.text();
+    let payload = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch (error) {
+        payload = {};
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Request failed");
+    }
+
+    return payload;
+  }
+
   function initAuth() {
     if (isAuthPage() && getStoredSession()) {
       window.location.replace("dashboard.html");
@@ -571,45 +598,73 @@
           return;
         }
 
-        // Local storage signup
-        const users = getStoredUsers();
-        const existing = users.find(
-          (entry) => entry.email.toLowerCase() === email,
-        );
-        if (existing) {
+        try {
+          const { user } = await apiRequest("/api/signup", {
+            method: "POST",
+            body: JSON.stringify({
+              name,
+              email,
+              password,
+              role,
+              location,
+              bloodType: role === "donor" ? bloodType : "",
+              hospitalName: role === "hospital" ? hospitalName : "",
+              contact: "",
+              supportLevel: "ready",
+            }),
+          });
+
+          setStoredSession(user);
+          signupForm.reset();
+          updateRoleFields();
+          renderSession();
+          renderUserIsland();
           setMessage(
-            "An account with that email already exists. Please log in instead.",
-            "error",
+            `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
+            "success",
           );
-          showTab("login");
-          if (loginEmail) loginEmail.value = email;
+          window.location.replace("dashboard.html");
           return;
+        } catch (error) {
+          const users = getStoredUsers();
+          const existing = users.find(
+            (entry) => entry.email.toLowerCase() === email,
+          );
+          if (existing) {
+            setMessage(
+              "An account with that email already exists. Please log in instead.",
+              "error",
+            );
+            showTab("login");
+            if (loginEmail) loginEmail.value = email;
+            return;
+          }
+
+          const user = {
+            id: `${Date.now()}`,
+            name,
+            role,
+            email,
+            password,
+            location,
+            bloodType: role === "donor" ? bloodType : "",
+            hospitalName: role === "hospital" ? hospitalName : "",
+            createdAt: new Date().toISOString(),
+          };
+
+          users.push(user);
+          saveStoredUsers(users);
+          setStoredSession(user);
+          signupForm.reset();
+          updateRoleFields();
+          renderSession();
+          renderUserIsland();
+          setMessage(
+            `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
+            "success",
+          );
+          window.location.replace("dashboard.html");
         }
-
-        const user = {
-          id: `${Date.now()}`,
-          name,
-          role,
-          email,
-          password,
-          location,
-          bloodType: role === "donor" ? bloodType : "",
-          hospitalName: role === "hospital" ? hospitalName : "",
-          createdAt: new Date().toISOString(),
-        };
-
-        users.push(user);
-        saveStoredUsers(users);
-        setStoredSession(user);
-        signupForm.reset();
-        updateRoleFields();
-        renderSession();
-        renderUserIsland();
-        setMessage(
-          `Welcome aboard, ${user.name}. Your ${role === "hospital" ? "hospital" : "donor"} account is ready.`,
-          "success",
-        );
-        window.location.replace("dashboard.html");
       });
     }
 
@@ -628,26 +683,39 @@
           return;
         }
 
-        // Local storage login
-        const users = getStoredUsers();
-        const match = users.find(
-          (entry) =>
-            entry.email.toLowerCase() === email && entry.password === password,
-        );
+        try {
+          const { user } = await apiRequest("/api/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password }),
+          });
 
-        if (!match) {
-          setMessage(
-            "We could not find that account. Please check your details or sign up first.",
-            "error",
-          );
+          setStoredSession(user);
+          renderSession();
+          renderUserIsland();
+          setMessage(`Welcome back, ${user.name}.`, "success");
+          window.location.replace("dashboard.html");
           return;
-        }
+        } catch (error) {
+          const users = getStoredUsers();
+          const match = users.find(
+            (entry) =>
+              entry.email.toLowerCase() === email && entry.password === password,
+          );
 
-        setStoredSession(match);
-        renderSession();
-        renderUserIsland();
-        setMessage(`Welcome back, ${match.name}.`, "success");
-        window.location.replace("dashboard.html");
+          if (!match) {
+            setMessage(
+              "We could not find that account. Please check your details or sign up first.",
+              "error",
+            );
+            return;
+          }
+
+          setStoredSession(match);
+          renderSession();
+          renderUserIsland();
+          setMessage(`Welcome back, ${match.name}.`, "success");
+          window.location.replace("dashboard.html");
+        }
       });
     }
 

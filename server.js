@@ -102,10 +102,45 @@ function calculateMatchScore(donor = {}, request = {}) {
 
 function safeUser(user) {
   if (!user) return null;
-  const copy = { ...user };
+  const copy = {
+    ...user,
+    bloodType: user.bloodType || user.blood_type || "",
+    hospitalName: user.hospitalName || user.hospital_name || "",
+    supportLevel: user.supportLevel || user.support_level || "ready",
+    verified: !!user.verified,
+  };
   delete copy.pass_hash;
   delete copy.pass_salt;
   return copy;
+}
+
+function serializeRequest(request) {
+  if (!request) return null;
+  return {
+    ...request,
+    priority: request.priority || request.tag || "Urgent",
+    requestedMinutes: request.requestedMinutes ?? request.requested_minutes ?? 0,
+    hospitalId: request.hospitalId ?? request.hospital_id ?? null,
+    hospitalName: request.hospitalName ?? request.hospital_name ?? null,
+    hospitalLocation: request.hospitalLocation ?? request.hospital_location ?? "",
+    createdAt: request.createdAt ?? request.created_at ?? new Date().toISOString(),
+    updatedAt: request.updatedAt ?? request.updated_at ?? request.createdAt ?? request.created_at ?? new Date().toISOString(),
+    status: request.status || "open",
+  };
+}
+
+function serializeNotification(notification) {
+  if (!notification) return null;
+  return {
+    ...notification,
+    donorId: notification.donorId ?? notification.donor_id ?? null,
+    requestId: notification.requestId ?? notification.request_id ?? null,
+    matchScore: notification.matchScore ?? notification.match_score ?? 0,
+    urgencyScore: notification.urgencyScore ?? notification.urgency_score ?? 0,
+    createdAt: notification.createdAt ?? notification.created_at ?? new Date().toISOString(),
+    readAt: notification.readAt ?? notification.read_at ?? null,
+    sentAt: notification.sentAt ?? notification.sent_at ?? null,
+  };
 }
 
 function dbRun(sql, params = []) {
@@ -438,7 +473,7 @@ app.get("/api/requests", async (req, res) => {
     sql += " ORDER BY created_at DESC";
 
     const requests = await dbAll(sql, params);
-    res.json({ requests });
+    res.json({ requests: requests.map(serializeRequest) });
   } catch (error) {
     console.error("request listing failed:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -494,7 +529,7 @@ app.post("/api/requests", async (req, res) => {
     );
 
     const notifications = await notifyEligibleDonors(request);
-    return res.json({ request, notificationsSent: notifications.length });
+    return res.json({ request: serializeRequest(request), notificationsSent: notifications.length });
   } catch (error) {
     console.error("request creation failed:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -540,7 +575,7 @@ app.put("/api/requests/:id", async (req, res) => {
       [existing.type, existing.place, existing.priority, existing.requested_minutes, existing.status, existing.contact, existing.updated_at, id],
     );
 
-    return res.json({ request: existing });
+    return res.json({ request: serializeRequest(existing) });
   } catch (error) {
     console.error("request update failed:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -604,7 +639,7 @@ app.get("/api/notifications", async (req, res) => {
     sql += " ORDER BY created_at DESC";
 
     const notifications = await dbAll(sql, params);
-    return res.json({ notifications });
+    return res.json({ notifications: notifications.map(serializeNotification) });
   } catch (error) {
     console.error("notification lookup failed:", error);
     return res.status(500).json({ error: "Internal server error" });

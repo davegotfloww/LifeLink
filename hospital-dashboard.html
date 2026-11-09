@@ -106,6 +106,33 @@
           }
         }
 
+        async function apiRequest(url, options = {}) {
+          const response = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              ...(options.headers || {}),
+            },
+          });
+
+          const text = await response.text();
+          let payload = {};
+          if (text) {
+            try {
+              payload = JSON.parse(text);
+            } catch (error) {
+              payload = {};
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(payload.error || "Request failed");
+          }
+
+          return payload;
+        }
+
         function getStoredRequests() {
           try {
             return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -118,44 +145,73 @@
           localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
         }
 
-        function saveRequestLocally(request) {
-          const requests = getStoredRequests();
-          requests.unshift(request);
-          saveStoredRequests(requests);
-        }
-
         async function fetchHospitalRequests(hospitalId) {
-          return getStoredRequests().filter((req) => req.hospitalId === hospitalId);
+          if (!hospitalId) return [];
+          try {
+            const data = await apiRequest(`/api/requests?hospitalId=${encodeURIComponent(hospitalId)}`);
+            return Array.isArray(data.requests) ? data.requests : [];
+          } catch (error) {
+            return getStoredRequests().filter((req) => String(req.hospitalId) === String(hospitalId));
+          }
         }
 
         async function submitRequest(payload, requestId) {
-          const requests = getStoredRequests();
-          if (requestId) {
-            const index = requests.findIndex((r) => r.id === requestId);
-            if (index !== -1) {
-              requests[index] = { ...requests[index], ...payload, updatedAt: new Date().toISOString() };
-              saveStoredRequests(requests);
-              return { request: requests[index] };
-            }
-            return { error: "Request not found." };
-          }
+          try {
+            const body = {
+              type: payload.type,
+              place: payload.place,
+              priority: payload.tag || "Urgent",
+              tag: payload.tag || "Urgent",
+              requestedMinutes: Number(payload.requestedMinutes || 0),
+              hospitalId: payload.hospitalId || null,
+              hospitalName: payload.hospitalName || null,
+              hospitalLocation: payload.hospitalLocation || null,
+              contact: payload.contact || "",
+              status: payload.status || "open",
+            };
 
-          const newRequest = {
-            id: `req-${Date.now()}`,
-            type: payload.type,
-            place: payload.place,
-            tag: payload.tag || "Urgent",
-            requestedMinutes: payload.requestedMinutes || 0,
-            hospitalId: payload.hospitalId || null,
-            hospitalName: payload.hospitalName || null,
-            hospitalLocation: payload.hospitalLocation || null,
-            status: payload.status || "open",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          requests.unshift(newRequest);
-          saveStoredRequests(requests);
-          return { request: newRequest };
+            if (requestId) {
+              const result = await apiRequest(`/api/requests/${requestId}`, {
+                method: "PUT",
+                body: JSON.stringify({ ...body, status: payload.status || "open" }),
+              });
+              return { request: result.request || result };
+            }
+
+            const result = await apiRequest("/api/requests", {
+              method: "POST",
+              body: JSON.stringify(body),
+            });
+            return { request: result.request || result };
+          } catch (error) {
+            const requests = getStoredRequests();
+            if (requestId) {
+              const index = requests.findIndex((r) => r.id === requestId);
+              if (index !== -1) {
+                requests[index] = { ...requests[index], ...payload, updatedAt: new Date().toISOString() };
+                saveStoredRequests(requests);
+                return { request: requests[index] };
+              }
+              return { error: "Request not found." };
+            }
+
+            const newRequest = {
+              id: `req-${Date.now()}`,
+              type: payload.type,
+              place: payload.place,
+              tag: payload.tag || "Urgent",
+              requestedMinutes: payload.requestedMinutes || 0,
+              hospitalId: payload.hospitalId || null,
+              hospitalName: payload.hospitalName || null,
+              hospitalLocation: payload.hospitalLocation || null,
+              status: payload.status || "open",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            requests.unshift(newRequest);
+            saveStoredRequests(requests);
+            return { request: newRequest };
+          }
         }
 
         function formatStatusLabel(status) {
@@ -175,18 +231,20 @@
           requests.forEach((req) => {
             const card = document.createElement("div");
             card.className = "request-card";
+            const status = req.status || "open";
+            const tag = req.priority || req.tag || "Urgent";
             card.innerHTML = `
               <div>
                 <div class="request-meta">
                   <strong>${req.type || "—"}</strong>
                   <span>${req.place || "Unknown location"}</span>
-                  <span class="status-pill ${req.status || "open"}">${formatStatusLabel(req.status)}</span>
+                  <span class="status-pill ${status}">${formatStatusLabel(status)}</span>
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 14px;">
                   ${req.hospitalName ? `${req.hospitalName} · ${req.hospitalLocation || "Location not set"}` : "Hospital request"}
                 </div>
                 <div style="margin-top: 8px; color: var(--muted); font-size: 13px;">
-                  requested ${req.requestedMinutes || 0} minutes ago
+                  ${tag} · requested ${req.requestedMinutes || 0} minutes ago
                 </div>
               </div>
               <div class="request-actions">
@@ -227,7 +285,7 @@
           form.elements["requestId"].value = request.id || "";
           form.elements["type"].value = request.type || "";
           form.elements["place"].value = request.place || "";
-          form.elements["tag"].value = request.tag || "Urgent";
+          form.elements["tag"].value = request.priority || request.tag || "Urgent";
           form.elements["minutes"].value = request.requestedMinutes || 0;
           const submitButton = form.querySelector("button[type='submit']");
           if (submitButton) submitButton.textContent = "Update request";

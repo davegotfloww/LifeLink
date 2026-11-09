@@ -123,6 +123,14 @@
               const hintElement = document.getElementById("filter-hint");
               const listElement = document.querySelector(".urgent-list");
 
+              function getStoredSession() {
+                try {
+                  return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
+                } catch (error) {
+                  return null;
+                }
+              }
+
               function getStoredRequests() {
                 try {
                   return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -131,12 +139,21 @@
                 }
               }
 
-              function getStoredSession() {
-                try {
-                  return JSON.parse(localStorage.getItem("lifelinkCurrentUser"));
-                } catch (error) {
-                  return null;
+              async function apiRequest(url) {
+                const response = await fetch(url, { headers: { "Content-Type": "application/json" } });
+                const text = await response.text();
+                let payload = {};
+                if (text) {
+                  try {
+                    payload = JSON.parse(text);
+                  } catch (error) {
+                    payload = {};
+                  }
                 }
+                if (!response.ok) {
+                  throw new Error(payload.error || "Request failed");
+                }
+                return payload;
               }
 
               function showFilterHint(text) {
@@ -159,8 +176,9 @@
                 requests.forEach((req) => {
                   const item = document.createElement("div");
                   item.className = "urgent-item";
-                  const tagLabel = req.status ? String(req.status).charAt(0).toUpperCase() + String(req.status).slice(1) : req.tag || "Urgent";
-                  const tagClass = req.status === "fulfilled" ? "high" : req.status === "cancelled" ? "" : (req.tag && req.tag.toLowerCase() === "critical" ? "high" : "");
+                  const status = String(req.status || "open").toLowerCase();
+                  const tagLabel = status === "fulfilled" ? "Fulfilled" : status === "cancelled" ? "Cancelled" : (req.priority || req.tag || "Urgent");
+                  const tagClass = status === "fulfilled" ? "high" : status === "cancelled" ? "" : ((req.priority || req.tag || "").toLowerCase() === "critical" ? "high" : "");
                   item.innerHTML = `
                     <div class="type-badge">${req.type || "—"}</div>
                     <div class="place">
@@ -174,27 +192,40 @@
                 });
               }
 
-              function loadRequests(filters = new URLSearchParams()) {
-                let requests = getStoredRequests();
+              async function loadRequests(filters = new URLSearchParams()) {
+                const query = new URLSearchParams(filters);
+                const params = [];
+                if (query.get("type")) params.push(`type=${encodeURIComponent(query.get("type"))}`);
+                if (query.get("place")) params.push(`place=${encodeURIComponent(query.get("place"))}`);
+                if (query.get("status")) params.push(`status=${encodeURIComponent(query.get("status"))}`);
+                const requestUrl = params.length ? `/api/requests?${params.join("&")}` : "/api/requests?status=open";
 
-                const type = filters.get("type");
-                const place = filters.get("place");
-                const status = filters.get("status");
+                try {
+                  const data = await apiRequest(requestUrl);
+                  const requests = Array.isArray(data.requests) ? data.requests : [];
+                  renderRequestsFromData(requests);
+                  return;
+                } catch (error) {
+                  let requests = getStoredRequests();
+                  const type = query.get("type");
+                  const place = query.get("place");
+                  const status = query.get("status");
 
-                if (type) {
-                  const typeLower = type.toLowerCase();
-                  requests = requests.filter((r) => String(r.type || "").toLowerCase().includes(typeLower));
-                }
-                if (place) {
-                  const placeLower = place.toLowerCase();
-                  requests = requests.filter((r) => String(r.place || "").toLowerCase().includes(placeLower));
-                }
-                if (status) {
-                  const statusLower = status.toLowerCase();
-                  requests = requests.filter((r) => String(r.status || "open").toLowerCase() === statusLower);
-                }
+                  if (type) {
+                    const typeLower = type.toLowerCase();
+                    requests = requests.filter((r) => String(r.type || "").toLowerCase().includes(typeLower));
+                  }
+                  if (place) {
+                    const placeLower = place.toLowerCase();
+                    requests = requests.filter((r) => String(r.place || "").toLowerCase().includes(placeLower));
+                  }
+                  if (status) {
+                    const statusLower = status.toLowerCase();
+                    requests = requests.filter((r) => String(r.status || "open").toLowerCase() === statusLower);
+                  }
 
-                renderRequestsFromData(requests);
+                  renderRequestsFromData(requests);
+                }
               }
 
               function buildFilters() {
@@ -223,7 +254,7 @@
                 if (filterForm) {
                   filterForm.addEventListener("submit", async (event) => {
                     event.preventDefault();
-                    loadRequests(buildFilters());
+                    await loadRequests(buildFilters());
                   });
                 }
 
